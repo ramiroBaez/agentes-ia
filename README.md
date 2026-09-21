@@ -19,7 +19,7 @@ Each project builds on the previous one and adds a new layer of complexity. Ever
 
 | # | Project | Core skills covered | Status |
 |---|---------|--------------------|--------|
-| 1 | Function calling | Tool-use loop (model decides → code executes → model answers) | Planned |
+| 1 | Function calling | Tool-use loop (model decides → code executes → model answers) | ✅ Done |
 | 2 | Agent with multiple tools | Tool selection, error handling, exponential backoff | Planned |
 | 3 | Structured output (Pydantic) | JSON mode / structured outputs, schema validation | Planned |
 | 4 | Mini RAG system | Chunking, embeddings, vector DB (ChromaDB), semantic search | Planned |
@@ -92,7 +92,7 @@ Cada proyecto se apoya en el anterior y suma una capa nueva de complejidad. Cada
 
 | # | Proyecto | Habilidades cubiertas | Estado |
 |---|----------|-----------------------|--------|
-| 1 | Function calling | Ciclo de uso de herramientas (el modelo decide → el código ejecuta → el modelo responde) | Planeado |
+| 1 | Function calling | Ciclo de uso de herramientas (el modelo decide → el código ejecuta → el modelo responde) | ✅ Hecho |
 | 2 | Agente con múltiples herramientas | Selección de herramientas, manejo de errores, backoff exponencial | Planeado |
 | 3 | Salida estructurada (Pydantic) | Modo JSON / structured outputs, validación con esquemas | Planeado |
 | 4 | Mini sistema RAG | Chunking, embeddings, base vectorial (ChromaDB), búsqueda semántica | Planeado |
