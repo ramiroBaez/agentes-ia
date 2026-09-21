@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+
+# Environment variables — never commit your API keys
+.env
+.env.local
+.env.*.local
+
+# Vector database (regenerated at runtime)
+chroma_db/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
