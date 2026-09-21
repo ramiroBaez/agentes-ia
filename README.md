@@ -22,7 +22,7 @@ Each project builds on the previous one and adds a new layer of complexity. Ever
 | 1 | Function calling | Tool-use loop (model decides → code executes → model answers) | ✅ Done |
 | 2 | Agent with multiple tools | Tool selection, error handling, exponential backoff | ✅ Done |
 | 3 | Structured output (Pydantic) | JSON mode / structured outputs, schema validation | ✅ Done |
-| 4 | Mini RAG system | Chunking, embeddings, vector DB (ChromaDB), semantic search | Planned |
+| 4 | Mini RAG system | Chunking, embeddings, vector DB (ChromaDB), semantic search | ✅ Done |
 | 5 | First agent framework | LangGraph / Pydantic AI, ReAct loop, short-term memory | Planned |
 | 6 | RAG inside a framework agent | Agent with a knowledge-retrieval tool | Planned |
 | 7 | Consume an MCP server | Model Context Protocol, external tools | Planned |
@@ -95,7 +95,7 @@ Cada proyecto se apoya en el anterior y suma una capa nueva de complejidad. Cada
 | 1 | Function calling | Ciclo de uso de herramientas (el modelo decide → el código ejecuta → el modelo responde) | ✅ Hecho |
 | 2 | Agente con múltiples herramientas | Selección de herramientas, manejo de errores, backoff exponencial | ✅ Hecho |
 | 3 | Salida estructurada (Pydantic) | Modo JSON / structured outputs, validación con esquemas | ✅ Hecho |
-| 4 | Mini sistema RAG | Chunking, embeddings, base vectorial (ChromaDB), búsqueda semántica | Planeado |
+| 4 | Mini sistema RAG | Chunking, embeddings, base vectorial (ChromaDB), búsqueda semántica | ✅ Hecho |
 | 5 | Primer framework de agentes | LangGraph / Pydantic AI, loop ReAct, memoria de corto plazo | Planeado |
 | 6 | RAG dentro de un agente con framework | Agente con herramienta de recuperación de conocimiento | Planeado |
 | 7 | Consumir un servidor MCP | Model Context Protocol, herramientas externas | Planeado |
