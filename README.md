@@ -23,7 +23,7 @@ Each project builds on the previous one and adds a new layer of complexity. Ever
 | 2 | Agent with multiple tools | Tool selection, error handling, exponential backoff | ✅ Done |
 | 3 | Structured output (Pydantic) | JSON mode / structured outputs, schema validation | ✅ Done |
 | 4 | Mini RAG system | Chunking, embeddings, vector DB (ChromaDB), semantic search | ✅ Done |
-| 5 | First agent framework | LangGraph / Pydantic AI, ReAct loop, short-term memory | Planned |
+| 5 | First agent framework | LangGraph / Pydantic AI, ReAct loop, short-term memory, multi-provider fallback | ✅ Done |
 | 6 | RAG inside a framework agent | Agent with a knowledge-retrieval tool | Planned |
 | 7 | Consume an MCP server | Model Context Protocol, external tools | Planned |
 | 8 | Custom MCP server | Build and expose your own tools via MCP | Planned |
@@ -58,10 +58,11 @@ Then open any project folder and follow its README.
 ### Stack
 
 - **Language:** Python 3.11+
-- **LLM provider:** Google Gemini (`google-genai`)
+- **LLM providers:** Google Gemini (`google-genai`), Groq and OpenRouter (OpenAI-compatible), with a failover chain
+- **Agent framework:** LangGraph (graphs, conditional branching, checkpoints)
 - **Data validation:** Pydantic
 - **Vector database:** ChromaDB
-- **Coming up:** LangGraph / Pydantic AI, FastAPI, Docker, Langfuse
+- **Coming up:** FastAPI, Docker, Langfuse
 
 ### Repository layout
 
@@ -71,6 +72,9 @@ agentes-ia/
 ├── requirements.txt      # Shared dependencies
 ├── 01-function-calling/
 ├── 02-agent-multi-tools/
+├── 03-structured-output/
+├── 04-sistema-rag/
+├── 05-first-agent-framework/
 ├── ...
 └── README.md             # This file
 ```
@@ -96,7 +100,7 @@ Cada proyecto se apoya en el anterior y suma una capa nueva de complejidad. Cada
 | 2 | Agente con múltiples herramientas | Selección de herramientas, manejo de errores, backoff exponencial | ✅ Hecho |
 | 3 | Salida estructurada (Pydantic) | Modo JSON / structured outputs, validación con esquemas | ✅ Hecho |
 | 4 | Mini sistema RAG | Chunking, embeddings, base vectorial (ChromaDB), búsqueda semántica | ✅ Hecho |
-| 5 | Primer framework de agentes | LangGraph / Pydantic AI, loop ReAct, memoria de corto plazo | Planeado |
+| 5 | Primer framework de agentes | LangGraph / Pydantic AI, loop ReAct, memoria de corto plazo, respaldo multi-proveedor | ✅ Hecho |
 | 6 | RAG dentro de un agente con framework | Agente con herramienta de recuperación de conocimiento | Planeado |
 | 7 | Consumir un servidor MCP | Model Context Protocol, herramientas externas | Planeado |
 | 8 | Servidor MCP propio | Construir y exponer tus propias herramientas vía MCP | Planeado |
@@ -131,10 +135,11 @@ Después entrá a la carpeta de cualquier proyecto y seguí su README.
 ### Stack
 
 - **Lenguaje:** Python 3.11+
-- **Proveedor de LLM:** Google Gemini (`google-genai`)
+- **Proveedores de LLM:** Google Gemini (`google-genai`), Groq y OpenRouter (compatibles OpenAI), con cadena de respaldo
+- **Framework de agentes:** LangGraph (grafos, ramificación condicional, checkpoints)
 - **Validación de datos:** Pydantic
 - **Base vectorial:** ChromaDB
-- **Próximamente:** LangGraph / Pydantic AI, FastAPI, Docker, Langfuse
+- **Próximamente:** FastAPI, Docker, Langfuse
 
 ### Estructura del repositorio
 
@@ -144,6 +149,9 @@ agentes-ia/
 ├── requirements.txt      # Dependencias compartidas
 ├── 01-function-calling/
 ├── 02-agent-multi-tools/
+├── 03-structured-output/
+├── 04-sistema-rag/
+├── 05-first-agent-framework/
 ├── ...
 └── README.md             # Este archivo
 ```
