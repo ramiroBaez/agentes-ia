@@ -24,7 +24,7 @@ Each project builds on the previous one and adds a new layer of complexity. Ever
 | 3 | Structured output (Pydantic) | JSON mode / structured outputs, schema validation | ✅ Done |
 | 4 | Mini RAG system | Chunking, embeddings, vector DB (ChromaDB), semantic search | ✅ Done |
 | 5 | First agent framework | LangGraph / Pydantic AI, ReAct loop, short-term memory, multi-provider fallback | ✅ Done |
-| 6 | RAG inside a framework agent | Agent with a knowledge-retrieval tool | Planned |
+| 6 | RAG inside a framework agent | Agent with a knowledge-retrieval tool | ✅ Done |
 | 7 | Consume an MCP server | Model Context Protocol, external tools | Planned |
 | 8 | Custom MCP server | Build and expose your own tools via MCP | Planned |
 | 9 | Multi-agent orchestration | Supervisor + specialized workers, iteration limits | Planned |
@@ -75,6 +75,7 @@ agentes-ia/
 ├── 03-structured-output/
 ├── 04-sistema-rag/
 ├── 05-first-agent-framework/
+├── 06-rag-inside-framework/
 ├── ...
 └── README.md             # This file
 ```
@@ -101,7 +102,7 @@ Cada proyecto se apoya en el anterior y suma una capa nueva de complejidad. Cada
 | 3 | Salida estructurada (Pydantic) | Modo JSON / structured outputs, validación con esquemas | ✅ Hecho |
 | 4 | Mini sistema RAG | Chunking, embeddings, base vectorial (ChromaDB), búsqueda semántica | ✅ Hecho |
 | 5 | Primer framework de agentes | LangGraph / Pydantic AI, loop ReAct, memoria de corto plazo, respaldo multi-proveedor | ✅ Hecho |
-| 6 | RAG dentro de un agente con framework | Agente con herramienta de recuperación de conocimiento | Planeado |
+| 6 | RAG dentro de un agente con framework | Agente con herramienta de recuperación de conocimiento | ✅ Hecho |
 | 7 | Consumir un servidor MCP | Model Context Protocol, herramientas externas | Planeado |
 | 8 | Servidor MCP propio | Construir y exponer tus propias herramientas vía MCP | Planeado |
 | 9 | Orquestación multi-agente | Supervisor + workers especializados, límites de iteraciones | Planeado |
@@ -152,6 +153,7 @@ agentes-ia/
 ├── 03-structured-output/
 ├── 04-sistema-rag/
 ├── 05-first-agent-framework/
+├── 06-rag-inside-framework/
 ├── ...
 └── README.md             # Este archivo
 ```
