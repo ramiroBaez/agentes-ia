@@ -1,6 +1,85 @@
-# Project 4 — Mini RAG System / Proyecto 4 — Mini sistema RAG
+# Proyecto 4 — Mini sistema RAG / Project 4 — Mini RAG System
 
-**🌐 Language / Idioma:** [English](#english) · [Español](#español)
+**🌐 Idioma / Language:** [Español](#español) · [English](#english)
+
+---
+
+<a id="español"></a>
+## 🇪🇸 Español
+
+### Resumen
+
+Un **mini sistema RAG (Retrieval-Augmented Generation)**: indexa documentos Markdown en una base vectorial ChromaDB y responde preguntas sobre ellos, anclando sus respuestas en la información real de esos documentos en vez de la memoria del modelo.
+
+Viene con una base de conocimiento curada incluida en `notas/` sobre el stack de agentes de IA (function calling, salidas estructuradas, RAG, MCP, producción y seguridad) — y podés agregar tus propios archivos `.md` ahí.
+
+### Cómo funciona
+
+| Paso | Qué pasa |
+|------|----------|
+| 1 | **Chunking** — los documentos se cortan en pedazos de ~800 caracteres con 150 de solape |
+| 2 | **Embeddings** — cada chunk se convierte en un vector con `gemini-embedding-001` |
+| 3 | **Almacenamiento** — los vectores se guardan en una colección persistente de **ChromaDB** (espacio coseno) |
+| 4 | **Búsqueda** — la pregunta se embediea y se recuperan los 5 chunks más parecidos |
+| 5 | **Generación** — esos chunks entran al prompt como el *único* contexto permitido; el modelo responde citando las fuentes usadas |
+
+### Cómo ejecutarlo
+
+Desde la raíz del repo (tras el setup inicial del `README.md` raíz):
+
+```bash
+venv\Scripts\python.exe 04-sistema-rag\rag_chat.py   # Windows
+```
+
+La primera corrida indexa la carpeta `notas/` automáticamente. Para reconstruir el índice desde cero:
+
+```bash
+venv\Scripts\python.exe 04-sistema-rag\rag_chat.py --reindex
+```
+
+Ejemplo de sesión:
+
+```
+Chat RAG sobre tu base de conocimiento.
+Escribí una pregunta (o 'salir' para terminar).
+
+Pregunta> ¿Qué es un loop ReAct?
+  [Buscando en tus documentos...]
+
+Agente> El loop central de un agente de IA se conoce como **ReAct (Reason + Act)**.
+En ese loop el modelo razona qué hacer, actúa a través de una herramienta e
+incorpora el resultado en su próxima decisión.
+
+  Fuentes usadas (similitud coseno):
+    - 01-agents.md   (distancia 0.351)
+    - 02-function-calling.md   (distancia 0.412)
+    ...
+```
+
+Las respuestas del agente salen en español (el prompt de sistema lo indica), igual que la consola.
+
+### Agregar tus propios documentos
+
+Poné cualquier archivo `.md` dentro de `04-sistema-rag/notas/` y corré `--reindex`. Consultá en el idioma en que están escritos los documentos para mejores resultados.
+
+> **Nota del free tier:** el tier gratuito de Gemini limita las requests. El script agrupa los embeddings y, ante un `429`/`RESOURCE_EXHAUSTED`, espera exactamente el tiempo que la API sugiere antes de reintentar — nunca crashea por cuota.
+
+### Estructura
+
+```
+04-sistema-rag/
+├── rag_chat.py          # Chunk, embed, index, search and chat
+├── notas/               # Base de conocimiento (acá van tus docs)
+└── chroma_db/           # Base vectorial — auto-generada, git-ignored
+```
+
+### Habilidades cubiertas
+
+- Pipeline RAG completo: chunking → embeddings → base vectorial → búsqueda semántica → inyección de contexto
+- `chromadb.PersistentClient` y colección con similitud coseno
+- Batching de embeddings consciente de rate limits (respeta el retry sugerido por la API)
+- Grounding: instrucción de sistema que permite al modelo usar SOLO el contexto recuperado
+- Atribución de fuentes por respuesta (archivo + distancia coseno)
 
 ---
 
@@ -40,17 +119,23 @@ venv\Scripts\python.exe 04-sistema-rag\rag_chat.py --reindex
 Example session:
 
 ```
-Question> What is a ReAct loop?
+Chat RAG sobre tu base de conocimiento.
+Escribí una pregunta (o 'salir' para terminar).
 
-Agent> The core loop of an AI agent is known as **ReAct (Reason + Act)**. In this
-loop, the model reasons about what to do, acts through a tool, and incorporates
-the result into its next decision.
+Pregunta> ¿Qué es un loop ReAct?
+  [Buscando en tus documentos...]
 
-  Sources used (cosine similarity):
-    - 01-agents.md   (distance 0.351)
-    - 02-function-calling.md   (distance 0.412)
+Agente> El loop central de un agente de IA se conoce como **ReAct (Reason + Act)**.
+En ese loop el modelo razona qué hacer, actúa a través de una herramienta e
+incorpora el resultado en su próxima decisión.
+
+  Fuentes usadas (similitud coseno):
+    - 01-agents.md   (distancia 0.351)
+    - 02-function-calling.md   (distancia 0.412)
     ...
 ```
+
+> Note: the demo console output is in Spanish (the repo targets Spanish-speaking audiences, and the system prompt tells the model to answer in Spanish), but the code, identifiers and docstrings stay in English — the industry standard.
 
 ### Adding your own documents
 
@@ -74,61 +159,3 @@ Put any `.md` file inside `04-sistema-rag/notas/` and run `--reindex`. Query in 
 - Rate-limit-aware embedding batching (respects the API's suggested retry)
 - Grounding: a system instruction that allows the model to use ONLY the retrieved context
 - Source attribution per answer (file + cosine distance)
-
----
-
-<a id="español"></a>
-## 🇪🇸 Español
-
-### Resumen
-
-Un **mini sistema RAG (Retrieval-Augmented Generation)**: indexa documentos Markdown en una base vectorial ChromaDB y responde preguntas sobre ellos, anclando sus respuestas en la información real de esos documentos en vez de la memoria del modelo.
-
-Viene con una base de conocimiento curada incluida en `notas/` sobre el stack de agentes de IA (function calling, salidas estructuradas, RAG, MCP, producción y seguridad) — y podés agregar tus propios archivos `.md` ahí.
-
-### Cómo funciona
-
-| Paso | Qué pasa |
-|------|----------|
-| 1 | **Chunking** — los documentos se cortan en pedazos de ~800 caracteres con 150 de solape |
-| 2 | **Embeddings** — cada chunk se convierte en un vector con `gemini-embedding-001` |
-| 3 | **Almacenamiento** — los vectores se guardan en una colección persistente de **ChromaDB** (espacio coseno) |
-| 4 | **Búsqueda** — la pregunta se embediea y se recuperan los 5 chunks más parecidos |
-| 5 | **Generación** — esos chunks entran al prompt como el *único* contexto permitido; el modelo responde citando las fuentes usadas |
-
-### Cómo ejecutarlo
-
-Desde la raíz del repo (tras el setup inicial del `README.md` raíz):
-
-```bash
-venv\Scripts\python.exe 04-sistema-rag\rag_chat.py   # Windows
-```
-
-La primera corrida indexa la carpeta `notas/` automáticamente. Para reconstruir el índice desde cero:
-
-```bash
-venv\Scripts\python.exe 04-sistema-rag\rag_chat.py --reindex
-```
-
-### Agregar tus propios documentos
-
-Poné cualquier archivo `.md` dentro de `04-sistema-rag/notas/` y corré `--reindex`. Consultá en el idioma en que están escritos los documentos para mejores resultados.
-
-> **Nota del free tier:** el tier gratuito de Gemini limita las requests. El script agrupa los embeddings y, ante un `429`/`RESOURCE_EXHAUSTED`, espera exactamente el tiempo que la API sugiere antes de reintentar — nunca crashea por cuota.
-
-### Estructura
-
-```
-04-sistema-rag/
-├── rag_chat.py          # Chunk, embed, index, search and chat
-├── notas/               # Base de conocimiento (acá van tus docs)
-└── chroma_db/           # Base vectorial — auto-generada, git-ignored
-```
-
-### Habilidades cubiertas
-
-- Pipeline RAG completo: chunking → embeddings → base vectorial → búsqueda semántica → inyección de contexto
-- `chromadb.PersistentClient` y colección con similitud coseno
-- Batching de embeddings consciente de rate limits (respeta el retry sugerido por la API)
-- Grounding: instrucción de sistema que permite al modelo usar SOLO el contexto recuperado
-- Atribución de fuentes por respuesta (archivo + distancia coseno)

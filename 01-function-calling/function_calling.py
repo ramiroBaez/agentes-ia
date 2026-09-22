@@ -10,6 +10,7 @@ exactly what agent frameworks automate under the hood.
 """
 
 import os
+import sys
 
 from dotenv import load_dotenv
 from google import genai
@@ -55,14 +56,16 @@ def build_weather_tool() -> types.Tool:
 
 
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if not API_KEY or API_KEY == "your_gemini_api_key_here":
-        print("Error: set GEMINI_API_KEY in your .env file to call the API.")
+        print("Error: definí GEMINI_API_KEY en tu archivo .env para llamar a la API.")
         raise SystemExit(1)
 
     client = genai.Client(api_key=API_KEY)
     config = types.GenerateContentConfig(tools=[build_weather_tool()])
 
-    question = "What is the weather in La Plata?"
+    question = "¿Cuál es el clima en La Plata?"
 
     # Steps 2 and 3: send the message; the model either requests the tool
     # (function_calls) or answers directly (text).
@@ -74,11 +77,11 @@ def main() -> None:
 
     if response.function_calls:
         call = response.function_calls[0]
-        print(f"Model requested tool: {call.name} with {call.args}")
+        print(f"El modelo pidió la herramienta: {call.name} con {call.args}")
 
         # Steps 4 and 5: our code executes the real function.
         result = get_weather(**call.args)
-        print(f"Code executed get_weather() and returned: {result}")
+        print(f"El código ejecutó get_weather() y devolvió: {result}")
 
         # Step 6: feed the real result back to the model so it can compose
         # the final natural-language answer.
@@ -101,10 +104,10 @@ def main() -> None:
             contents=conversation,
         )
 
-        print("\nFinal answer from the model:")
+        print("\nRespuesta final del modelo:")
         print(final_response.text)
     else:
-        print("The model answered directly without using the tool:")
+        print("El modelo respondió directo, sin usar la herramienta:")
         print(response.text)
 
 

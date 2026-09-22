@@ -12,6 +12,7 @@ To simulate API failures without cutting the network:
 
 import os
 import random
+import sys
 import time
 
 from dotenv import load_dotenv
@@ -24,7 +25,7 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 if not API_KEY or API_KEY == "your_gemini_api_key_here":
-    print("Error: set GEMINI_API_KEY in your .env file to call the API.")
+    print("Error: definí GEMINI_API_KEY en tu archivo .env para llamar a la API.")
     raise SystemExit(1)
 
 client = genai.Client(api_key=API_KEY)
@@ -50,7 +51,7 @@ def search_product(term: str) -> str:
     """Search products in the catalog by partial text or list the full catalog."""
     t = term.lower().strip()
     if t in ("", "all", "everything", "*", "list"):
-        return "Full catalog:\n" + "\n".join(
+        return "Catálogo completo:\n" + "\n".join(
             f"- {name}: ${data['price']:,.2f} (stock: {data['stock']})"
             for name, data in CATALOG.items()
         )
@@ -60,34 +61,34 @@ def search_product(term: str) -> str:
         if t in name
     ]
     if not matches:
-        return f"I found no products matching '{term}'."
-    return "Products found:\n" + "\n".join(matches)
+        return f"No encontré productos que contengan '{term}'."
+    return "Productos encontrados:\n" + "\n".join(matches)
 
 
 def check_stock(product: str) -> str:
     """Return the available stock of an exact catalog product."""
     data = CATALOG.get(product.lower().strip())
     if not data:
-        return f"I don't have the product '{product}' in the catalog."
-    return f"Stock of '{product}': {data['stock']} units."
+        return f"No tengo el producto '{product}' en el catálogo."
+    return f"Stock de '{product}': {data['stock']} unidades."
 
 
 def calculate_total(product: str, quantity: int) -> str:
     """Calculate subtotal, VAT (21%) and total for buying a product quantity."""
     data = CATALOG.get(product.lower().strip())
     if not data:
-        return f"I don't have the product '{product}' in the catalog."
+        return f"No tengo el producto '{product}' en el catálogo."
     if quantity <= 0:
-        return "The quantity must be greater than zero."
+        return "La cantidad tiene que ser mayor a cero."
     subtotal = data["price"] * quantity
     vat = subtotal * 0.21
     total = subtotal + vat
     return (
-        f"Product: {product.lower().strip()}\n"
-        f"Unit price: ${data['price']:,.2f}\n"
-        f"Quantity: {quantity}\n"
+        f"Producto: {product.lower().strip()}\n"
+        f"Precio unitario: ${data['price']:,.2f}\n"
+        f"Cantidad: {quantity}\n"
         f"Subtotal: ${subtotal:,.2f}\n"
-        f"VAT (21%): ${vat:,.2f}\n"
+        f"IVA (21%): ${vat:,.2f}\n"
         f"Total: ${total:,.2f}"
     )
 
@@ -97,8 +98,8 @@ def apply_coupon(code: str) -> str:
     code = code.strip().upper()
     discount = COUPONS.get(code)
     if discount is None:
-        return f"The coupon '{code}' is invalid or has expired."
-    return f"Coupon '{code}' is valid: it grants a {discount * 100:.0f}% discount."
+        return f"El cupón '{code}' no es válido o ya expiró."
+    return f"Cupón '{code}' válido: otorga un {discount * 100:.0f}% de descuento."
 
 
 # ---------------------------------------------------- declare each tool contract
@@ -204,13 +205,13 @@ def call_with_retries(func, *args, **kwargs):
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             if SIMULATE_FAILURES and random.random() < 0.5:
-                raise TimeoutError("(simulated) the API did not respond in time")
+                raise TimeoutError("(simulado) la API no respondió a tiempo")
             return func(*args, **kwargs)
         except Exception as e:
-            print(f"  [Error on call (attempt {attempt}/{MAX_RETRIES}): {e}]")
+            print(f"  [Error en la llamada (intento {attempt}/{MAX_RETRIES}): {e}]")
             if attempt == MAX_RETRIES:
                 raise
-            print(f"  Retrying in {delay}s...")
+            print(f"  Reintentando en {delay}s...")
             time.sleep(delay)
             delay *= 2
 
@@ -218,7 +219,7 @@ def call_with_retries(func, *args, **kwargs):
 def execute_tools(calls, conversation):
     """Execute every tool requested by the model and append its turns."""
     for call in calls:
-        print(f"  Model requested: {call.name} with {call.args}")
+        print(f"  El modelo pidió: {call.name} con {call.args}")
         conversation.append(
             types.Content(role="model", parts=[types.Part(function_call=call)])
         )
@@ -226,8 +227,8 @@ def execute_tools(calls, conversation):
         try:
             result = tool(**(call.args or {}))
         except Exception as e:
-            result = f"Error running tool {call.name}: {e}"
-        print(f"  Result of {call.name}: {result}")
+            result = f"Error al ejecutar la herramienta {call.name}: {e}"
+        print(f"  Resultado de {call.name}: {result}")
         conversation.append(
             types.Content(
                 role="user",
@@ -242,26 +243,28 @@ def execute_tools(calls, conversation):
 
 # ------------------------------------------------------------- interactive console
 def main():
-    print("Online store agent. Tell me what you need.")
-    print("I can help you with these actions:")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    print("Agente de tienda online. Decime qué necesitás.")
+    print("Puedo ayudarte con estas acciones:")
     for name in TOOLS:
         print(f"  - {name}")
-    print("Type 'exit' to quit.\n")
+    print("Escribí 'salir' para terminar.\n")
 
     conversation = []
 
     while True:
-        user_input = input("You> ").strip()
+        user_input = input("Vos> ").strip()
         if not user_input:
             continue
-        if user_input.lower() in ("exit", "quit", "q"):
-            print("See you next time!")
+        if user_input.lower() in ("salir", "exit", "quit", "q"):
+            print("¡Hasta la próxima!")
             break
 
         conversation.append(types.Content(role="user", parts=[types.Part(text=user_input)]))
 
         for turn in range(1, MAX_TURNS + 1):
-            print(f"  [Turn {turn}/{MAX_TURNS}] Querying the model...")
+            print(f"  [Turno {turn}/{MAX_TURNS}] Consultando al modelo...")
             try:
                 response = call_with_retries(
                     client.models.generate_content,
@@ -270,7 +273,7 @@ def main():
                     contents=conversation,
                 )
             except Exception:
-                print("  This call ran out of retries.")
+                print("  Esta llamada se quedó sin reintentos.")
                 conversation.pop()
                 break
 
@@ -279,11 +282,11 @@ def main():
                 continue
 
             text = (response.text or "").strip()
-            print(f"Agent> {text}")
+            print(f"Agente> {text}")
             conversation.append(types.Content(role="model", parts=[types.Part(text=text)]))
             break
         else:
-            print("  I reached the turn limit for this question.")
+            print("  Llegué al límite de turnos para esta pregunta.")
 
 
 if __name__ == "__main__":

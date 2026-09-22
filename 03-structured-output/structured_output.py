@@ -9,6 +9,7 @@ object (Pydantic) ready to be used by another system.
 """
 
 import os
+import sys
 from typing import Literal
 
 from dotenv import load_dotenv
@@ -22,7 +23,7 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 if not API_KEY or API_KEY == "your_gemini_api_key_here":
-    print("Error: set GEMINI_API_KEY in your .env file to call the API.")
+    print("Error: definí GEMINI_API_KEY en tu archivo .env para llamar a la API.")
     raise SystemExit(1)
 
 client = genai.Client(api_key=API_KEY)
@@ -41,7 +42,10 @@ INSTRUCTION = (
     "Extract the order details from the user's message as JSON. Convert "
     "quantities written in words (e.g. 'three') to numbers, and classify the "
     "priority as low, medium or high based on the tone of the text. "
-    "Don't invent products or customers that don't appear in the message."
+    "Don't invent products or customers that don't appear in the message. "
+    "The order text may be in Spanish, English or any language: respond only "
+    "with the JSON schema, using the product names exactly as the customer "
+    "wrote them."
 )
 
 # --------------------------------------------------------------- the schema
@@ -105,31 +109,33 @@ def process_order(text: str) -> Order:
 
 
 def main():
-    print("Order extraction to structured JSON.")
-    print("Type the customer's message in free text (or type 'exit').\n")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    print("Extracción de pedido a JSON estructurado.")
+    print("Escribí el mensaje del cliente en texto libre (o 'salir').\n")
 
     while True:
-        text = input("Order message> ").strip()
+        text = input("Mensaje del pedido> ").strip()
         if not text:
             continue
-        if text.lower() in ("exit", "quit", "q"):
-            print("See you next time!")
+        if text.lower() in ("salir", "exit", "quit", "q"):
+            print("¡Hasta la próxima!")
             break
 
         try:
             order = process_order(text)
         except Exception as e:
-            print(f"  I couldn't process the order: {e}\n")
+            print(f"  No pude procesar el pedido: {e}\n")
             continue
 
-        print("\n  Validated Pydantic object:")
-        print(f"  Customer : {order.customer}")
-        print(f"  Priority : {order.priority}")
-        print("  Items:")
+        print("\n  Objeto Pydantic validado:")
+        print(f"  Cliente  : {order.customer}")
+        print(f"  Prioridad: {order.priority}")
+        print("  Ítems:")
         for line in order.items:
             print(f"    - {line.quantity} x {line.product}")
-        print(f"  Estimated total: {order.estimated_total}")
-        print("\n  JSON ready to store in the database:")
+        print(f"  Total estimado: {order.estimated_total}")
+        print("\n  JSON listo para guardar en la base:")
         print(order.model_dump_json(indent=2))
         print()
 

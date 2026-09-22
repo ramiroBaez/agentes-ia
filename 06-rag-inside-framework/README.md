@@ -1,6 +1,106 @@
-# Project 6 — RAG inside a framework agent (LangGraph) / Proyecto 6 — RAG dentro de un agente con framework (LangGraph)
+# Proyecto 6 — RAG dentro de un agente con framework (LangGraph) / Project 6 — RAG inside a framework agent (LangGraph)
 
-**🌐 Language / Idioma:** [English](#english) · [Español](#español)
+**🌐 Idioma / Language:** [Español](#español) · [English](#english)
+
+---
+
+<a id="español"></a>
+## 🇪🇸 Español
+
+### Resumen
+
+Este proyecto no crea un agente nuevo: **combina el Proyecto 5 y el Proyecto 4**. Al agente de la tienda (grafo de LangGraph con memoria) le agregamos el RAG como **una herramienta más**: `search_notes` recupera de las notas del curso de agentes los chunks más parecidos a la pregunta, y el modelo decide *él mismo* cuándo consultarlas — nadie lo fuerza.
+
+Es la diferencia clave con el Proyecto 4: allá el RAG era **todo el programa** (cada pregunta pasaba sí o sí por la búsqueda); acá es **una capability más**, y el loop ReAct del framework orquesta cuándo buscar en el catálogo, cuándo calcular y cuándo recuperar conocimiento.
+
+Reutiliza la **misma base de conocimiento e índice que el Proyecto 4** (`04-sistema-rag/notas/` → colección ChromaDB `notas_agentes`), así que no se indexa nada dos veces.
+
+### Cómo funciona
+
+| Paso | Qué pasa |
+|------|----------|
+| 1 | El mensaje del usuario entra al grafo en el nodo `agent` |
+| 2 | `agent` envía todo el historial al modelo (vía `provider.py`, cadena de respaldo) |
+| 3 | **Ramificación condicional**: si el modelo pidió herramientas → nodo `tools`; si respondió en texto → `END` |
+| 4 | El nodo `tools` ejecuta cada tool: acciones de la tienda (buscar, stock, cuentas) **o** `search_notes` (RAG sobre las notas) |
+| 5 | Los resultados vuelven al modelo, que arma la respuesta final **citando los chunks recuperados** |
+| 6 | Un **checkpointer** (`MemorySaver`) mantiene el contexto de la conversación entre turnos |
+
+### Las herramientas
+
+| Herramienta | Dominio | De dónde sale |
+|---|---|---|
+| `search_product` | tienda | Proyecto 2/5 |
+| `check_stock` | tienda | Proyecto 2/5 |
+| `calc_total` | tienda (cuentas) | Proyecto 2/5 |
+| `apply_coupon` | tienda | Proyecto 2/5 |
+| `search_notes` | conocimiento (**RAG**) | nueva · Proyecto 4 |
+
+`search_notes` devuelve los top-4 chunk con su archivo y distancia coseno, para que el modelo responda **anclado** en las notas:
+
+```
+[05-mcp.md] (distancia 0.242)
+MCP works with a two-part architecture: ...
+```
+
+> **Nota sobre embeddings:** `search_notes` usa embeddings de Gemini (`gemini-embedding-001`) a través del mismo `rag` que el Proyecto 4. No pasan por la cadena `provider` — la recuperación necesita `GEMINI_API_KEY` aunque el chat responda por Groq/OpenRouter.
+
+### Cómo ejecutarlo
+
+Desde la raíz del repo (tras el setup inicial del `README.md` raíz):
+
+```bash
+venv\Scripts\python.exe 06-rag-inside-framework\rag_agent.py            # Windows — índice existente
+venv\Scripts\python.exe 06-rag-inside-framework\rag_agent.py --reindex  # reconstruir el índice
+```
+
+Salida real (respondió Groq vía cadena de respaldo):
+
+```
+Proveedores (con respaldo): gemini, groq, openrouter
+Agente de tienda + notas (LangGraph + RAG). ¿Qué necesitás?
+Ej.: '¿Qué es MCP?' · '¿cuánto cuestan 2 monitores?'
+
+Vos> ¿Qué es MCP?
+
+  [Nodo agente] El modelo decidió: llamar herramienta(s): search_notes (proveedor: groq)
+  [Nodo herramientas] Ejecutando search_notes con {'query': 'MCP'}
+  [Nodo herramientas] Resultado: [05-mcp.md] (distancia 0.305)
+  [Nodo agente] El modelo decidió: responder en texto (proveedor: groq)
+Agente> MCP (Model Context Protocol) es un estándar abierto creado por Anthropic
+que define una única manera de exponer herramientas y datos a los agentes de IA...
+[responde citando los chunks recuperados]
+
+Vos> ¿Cuánto cuesta comprar 2 monitores?
+
+  [Nodo agente] El modelo decidió: llamar herramienta(s): search_product (proveedor: groq)
+  [Nodo herramientas] Ejecutando search_product con {'term': 'monitor'}
+  [Nodo agente] El modelo decidió: llamar herramienta(s): calc_total (proveedor: groq)
+Agente> El total de 2 monitores es $604,997.58 (IVA 21% incluido).
+
+Vos> ¿Y cuál era el total que te pasé recién?
+
+  [Nodo agente] El modelo decidió: responder en texto (proveedor: groq)
+Agente> El total que te pasé era $604,997.58.
+```
+
+El agente responde siempre en español (el prompt de sistema se lo pide). La misma sesión mezcla los dos dominios y **el modelo elige solo**, y el último turno se responde **desde la memoria**.
+
+### Estructura
+
+```
+06-rag-inside-framework/
+├── rag_agent.py     # el agente: grafo de estados + memoria + tools de tienda + search_notes
+├── rag.py           # recuperación RAG sobre el índice del Proyecto 4 (ChromaDB compartida)
+└── provider.py      # adaptador multi-proveedor (el mismo del Proyecto 5)
+```
+
+### Habilidades cubiertas
+
+- RAG como **herramienta que el modelo decide llamar**, dentro de un agente LangGraph (vs. Proyecto 4, donde el RAG era todo el programa)
+- Reutilización de un índice compartido entre proyectos (misma colección `notas_agentes` de ChromaDB)
+- Un solo prompt que gobierna **dos dominios** (acciones de tienda + recuperación de conocimiento)
+- Todo lo del Proyecto 5: grafo de estados, ramificación condicional, memoria corto plazo con `MemorySaver`, `recursion_limit`
 
 ---
 
@@ -57,31 +157,34 @@ venv\Scripts\python.exe 06-rag-inside-framework\rag_agent.py --reindex  # rebuil
 Example session (the failover chain answered via Groq):
 
 ```
-Providers (with fallback): groq
-Store + notes agent (LangGraph + RAG). What do you need?
+Proveedores (con respaldo): gemini, groq, openrouter
+Agente de tienda + notas (LangGraph + RAG). ¿Qué necesitás?
+Ej.: '¿Qué es MCP?' · '¿cuánto cuestan 2 monitores?'
 
-You> What is MCP?
+Vos> ¿Qué es MCP?
 
-  [Agent node] Model decided: call tool(s): search_notes (provider: groq)
-  [Tools node] Running search_notes with {'query': 'MCP'}
-  [Tools node] Result: [05-mcp.md] (distance 0.305)
-  [Agent node] Model decided: reply in text (provider: groq)
-Agent> MCP (Model Context Protocol) is an open standard created by Anthropic
-that defines a single way to expose tools and data to AI agents... [answering
-from the retrieved chunks]
+  [Nodo agente] El modelo decidió: llamar herramienta(s): search_notes (proveedor: groq)
+  [Nodo herramientas] Ejecutando search_notes con {'query': 'MCP'}
+  [Nodo herramientas] Resultado: [05-mcp.md] (distancia 0.305)
+  [Nodo agente] El modelo decidió: responder en texto (proveedor: groq)
+Agente> MCP (Model Context Protocol) es un estándar abierto creado por Anthropic
+que define una única manera de exponer herramientas y datos a los agentes de IA...
+[responde citando los chunks recuperados]
 
-You> How much does it cost to buy 2 monitors?
+Vos> ¿Cuánto cuesta comprar 2 monitores?
 
-  [Agent node] Model decided: call tool(s): search_product (provider: groq)
-  [Tools node] Running search_product with {'term': 'monitor'}
-  [Agent node] Model decided: call tool(s): calc_total (provider: groq)
-Agent> The total for 2 monitors is $604,997.58 (21% VAT included).
+  [Nodo agente] El modelo decidió: llamar herramienta(s): search_product (proveedor: groq)
+  [Nodo herramientas] Ejecutando search_product con {'term': 'monitor'}
+  [Nodo agente] El modelo decidió: llamar herramienta(s): calc_total (proveedor: groq)
+Agente> El total de 2 monitores es $604,997.58 (IVA 21% incluido).
 
-You> And what was the total I just gave you?
+Vos> ¿Y cuál era el total que te pasé recién?
 
-  [Agent node] Model decided: reply in text (provider: groq)
-Agent> The total I gave you was $604,997.58.
+  [Nodo agente] El modelo decidió: responder en texto (proveedor: groq)
+Agente> El total que te pasé era $604,997.58.
 ```
+
+> Note: the demo console output is in Spanish (the repo targets Spanish-speaking audiences; the system prompt tells the model to answer in Spanish), but the code, identifiers and docstrings stay in English — the industry standard.
 
 The same session mixes both domains and **the model picks on its own**, plus the last turn is answered **from memory**.
 
@@ -100,97 +203,3 @@ The same session mixes both domains and **the model picks on its own**, plus the
 - Reusing a shared index across projects (same ChromaDB `notas_agentes` collection)
 - A single prompt that governs **two domains** (store actions + knowledge retrieval)
 - Everything from Project 5: state graph, conditional branching, `MemorySaver` short-term memory, `recursion_limit`
-
----
-
-<a id="español"></a>
-## 🇪🇸 Español
-
-### Resumen
-
-Este proyecto no crea un agente nuevo: **combina el Proyecto 5 y el Proyecto 4**. Al agente de la tienda (grafo de LangGraph con memoria) le agregamos el RAG como **una herramienta más**: `search_notes` recupera de las notas del curso de agentes los chunks más parecidos a la pregunta, y el modelo decide *él mismo* cuándo consultarlas — nadie lo fuerza.
-
-Es la diferencia clave con el Proyecto 4: allá el RAG era **todo el programa** (cada pregunta pasaba sí o sí por la búsqueda); acá es **una capability más**, y el loop ReAct del framework orquesta cuándo buscar en el catálogo, cuándo calcular y cuándo recuperar conocimiento.
-
-Reutiliza la **misma base de conocimiento e índice que el Proyecto 4** (`04-sistema-rag/notas/` → colección ChromaDB `notas_agentes`), así que no se indexa nada dos veces.
-
-### Cómo funciona
-
-| Paso | Qué pasa |
-|------|----------|
-| 1 | El mensaje del usuario entra al grafo en el nodo `agent` |
-| 2 | `agent` envía todo el historial al modelo (vía `provider.py`, cadena de respaldo) |
-| 3 | **Ramificación condicional**: si el modelo pidió herramientas → nodo `tools`; si respondió en texto → `END` |
-| 4 | El nodo `tools` ejecuta cada tool: acciones de la tienda (buscar, stock, cuentas) **o** `search_notes` (RAG sobre las notas) |
-| 5 | Los resultados vuelven al modelo, que arma la respuesta final **citando los chunks recuperados** |
-| 6 | Un **checkpointer** (`MemorySaver`) mantiene el contexto de la conversación entre turnos |
-
-### Las herramientas
-
-| Herramienta | Dominio | De dónde sale |
-|---|---|---|
-| `search_product` | tienda | Proyecto 2/5 |
-| `check_stock` | tienda | Proyecto 2/5 |
-| `calc_total` | tienda (cuentas) | Proyecto 2/5 |
-| `apply_coupon` | tienda | Proyecto 2/5 |
-| `search_notes` | conocimiento (**RAG**) | nueva · Proyecto 4 |
-
-`search_notes` devuelve los top-4 chunk con su archivo y distancia coseno, para que el modelo responda **anclado** en las notas:
-
-```
-[05-mcp.md] (distance 0.242)
-MCP works with a two-part architecture: ...
-```
-
-> **Nota sobre embeddings:** `search_notes` usa embeddings de Gemini (`gemini-embedding-001`) a través del mismo `rag` que el Proyecto 4. No pasan por la cadena `provider` — la recuperación necesita `GEMINI_API_KEY` aunque el chat responda por Groq/OpenRouter.
-
-### Cómo ejecutarlo
-
-Desde la raíz del repo (tras el setup inicial del `README.md` raíz):
-
-```bash
-venv\Scripts\python.exe 06-rag-inside-framework\rag_agent.py            # Windows — índice existente
-venv\Scripts\python.exe 06-rag-inside-framework\rag_agent.py --reindex  # reconstruir el índice
-```
-
-Salida real (respondió Groq vía cadena de respaldo):
-
-```
-Providers (with fallback): groq
-Store + notes agent (LangGraph + RAG). What do you need?
-
-You> What is MCP?
-
-  [Agent node] Model decided: call tool(s): search_notes (provider: groq)
-  [Tools node] Running search_notes with {'query': 'MCP'}
-  [Tools node] Result: [05-mcp.md] (distance 0.305)
-  [Agent node] Model decided: reply in text (provider: groq)
-Agent> MCP (Model Context Protocol) is an open standard created by Anthropic
-that defines a single way to expose tools and data to AI agents... [responde
-citando los chunks recuperados]
-
-You> How much does it cost to buy 2 monitors?
-
-  [Agent node] Model decided: call tool(s): search_product (provider: groq)
-  [Tools node] Running search_product with {'term': 'monitor'}
-  [Agent node] Model decided: call tool(s): calc_total (provider: groq)
-Agent> The total for 2 monitors is $604,997.58 (21% VAT included).
-```
-
-La misma sesión mezcla los dos dominios y **el modelo elige solo**, y el último turno se responde **desde la memoria**.
-
-### Estructura
-
-```
-06-rag-inside-framework/
-├── rag_agent.py     # el agente: grafo de estados + memoria + tools de tienda + search_notes
-├── rag.py           # recuperación RAG sobre el índice del Proyecto 4 (ChromaDB compartida)
-└── provider.py      # adaptador multi-proveedor (el mismo del Proyecto 5)
-```
-
-### Habilidades cubiertas
-
-- RAG como **herramienta que el modelo decide llamar**, dentro de un agente LangGraph (vs. Proyecto 4, donde el RAG era todo el programa)
-- Reutilización de un índice compartido entre proyectos (misma colección `notas_agentes` de ChromaDB)
-- Un solo prompt que gobierna **dos dominios** (acciones de tienda + recuperación de conocimiento)
-- Todo lo del Proyecto 5: grafo de estados, ramificación condicional, memoria corto plazo con `MemorySaver`, `recursion_limit`

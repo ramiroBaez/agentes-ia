@@ -17,6 +17,7 @@ Usage:
 import argparse
 import os
 import re
+import sys
 import time
 from pathlib import Path
 
@@ -31,7 +32,7 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 if not API_KEY or API_KEY == "your_gemini_api_key_here":
-    print("Error: set GEMINI_API_KEY in your .env file to call the API.")
+    print("Error: definí GEMINI_API_KEY en tu archivo .env para llamar a la API.")
     raise SystemExit(1)
 
 client = genai.Client(api_key=API_KEY)
@@ -49,7 +50,8 @@ EMBEDDING_BATCH = 20
 ANSWER_SYSTEM_INSTRUCTION = (
     "You are an assistant specialized in the user's AI Agents knowledge base. "
     "Answer using ONLY the information from the context provided. If the answer "
-    "is not in the context, say so clearly."
+    "is not in the context, say so clearly. Answer in Spanish, since the user "
+    "and the knowledge base are in Spanish."
 )
 
 
@@ -61,7 +63,7 @@ def call_with_retries(func, *args, **kwargs):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            print(f"  [Error on call (attempt {attempt}/3): {str(e)[:110]}]")
+            print(f"  [Error en la llamada (intento {attempt}/3): {str(e)[:110]}]")
             if attempt == 3:
                 raise
             if "retry in" in str(e):
@@ -69,7 +71,7 @@ def call_with_retries(func, *args, **kwargs):
             else:
                 pause = delay
                 delay *= 2
-            print(f"  Retrying in {pause:.0f}s...")
+            print(f"  Reintentando en {pause:.0f}s...")
             time.sleep(pause)
 
 
@@ -99,8 +101,8 @@ def embed(texts: list[str]) -> list[list[float]]:
                 break
             except Exception as e:
                 print(
-                    f"  [Batch {len(vectors) // EMBEDDING_BATCH + 1}: error "
-                    f"(attempt {attempt}/5): {str(e)[:90]}]"
+                    f"  [Lote {len(vectors) // EMBEDDING_BATCH + 1}: error "
+                    f"(intento {attempt}/5): {str(e)[:90]}]"
                 )
                 if attempt == 5:
                     raise
@@ -143,7 +145,7 @@ def read_documents() -> list[tuple[str, str]]:
 
 def index(collection):
     """Chunk, embed and store the documents in the Chroma collection."""
-    print("Indexing your knowledge base...")
+    print("Indexando tu base de conocimiento...")
     documents = read_documents()
 
     chunks = []
@@ -155,18 +157,18 @@ def index(collection):
             ids.append(f"{name}#{i}")
             metadatas.append({"source": name, "position": i})
 
-    print(f"Documents: {len(documents)} | Chunks: {len(chunks)}")
-    print("Converting chunks to embeddings...")
+    print(f"Documentos: {len(documents)} | Fragmentos: {len(chunks)}")
+    print("Convirtiendo fragmentos en embeddings...")
     vectors = embed(chunks)
 
-    print("Saving to ChromaDB...")
+    print("Guardando en ChromaDB...")
     collection.add(
         ids=ids,
         documents=chunks,
         embeddings=vectors,
         metadatas=metadatas,
     )
-    print(f"Index ready: {collection.count()} chunks.\n")
+    print(f"Índice listo: {collection.count()} fragmentos.\n")
 
 
 def get_collection(reindex: bool):
@@ -185,8 +187,8 @@ def get_collection(reindex: bool):
         index(collection)
     else:
         print(
-            f"Using existing index ({collection.count()} chunks). "
-            "Pass --reindex to rebuild it.\n"
+            f"Usando el índice existente ({collection.count()} fragmentos). "
+            "Pasá --reindex para reconstruirlo.\n"
         )
     return collection
 
@@ -212,13 +214,15 @@ def build_context(results) -> str:
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(
-        description="Mini RAG system over your AI Agents knowledge base."
+        description="Mini sistema RAG sobre tu base de conocimiento de Agentes IA."
     )
     parser.add_argument(
         "--reindex",
         action="store_true",
-        help="Rebuild the index from scratch before chatting.",
+        help="Reconstruir el índice desde cero antes de chatear.",
     )
     args = parser.parse_args()
 
@@ -228,27 +232,27 @@ def main():
         system_instruction=ANSWER_SYSTEM_INSTRUCTION,
     )
 
-    print("RAG chat over your knowledge base.")
-    print("Type a question (or 'exit' to quit).\n")
+    print("Chat RAG sobre tu base de conocimiento.")
+    print("Escribí una pregunta (o 'salir' para terminar).\n")
 
     while True:
-        question = input("Question> ").strip()
+        question = input("Pregunta> ").strip()
         if not question:
             continue
-        if question.lower() in ("exit", "quit", "q"):
-            print("See you next time!")
+        if question.lower() in ("salir", "exit", "quit", "q"):
+            print("¡Hasta la próxima!")
             break
 
-        print("  [Searching your documents...]")
+        print("  [Buscando en tus documentos...]")
         results = search(collection, question)
         context = build_context(results)
         metas = results["metadatas"][0]
         distances = results["distances"][0]
 
         prompt = (
-            "Context (only data you may use):\n"
+            "Contexto (unica información que podés usar):\n"
             f"{context}\n\n"
-            f"User question: {question}"
+            f"Pregunta del usuario: {question}"
         )
 
         try:
@@ -261,17 +265,17 @@ def main():
         except Exception as e:
             if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
                 print(
-                    "  generate_content quota exhausted for today (free tier). "
-                    "The index and search work; try the answer later.\n"
+                    "  Cuota de generate_content agotada por hoy (free tier). "
+                    "El índice y la búsqueda funcionan; probá la respuesta más tarde.\n"
                 )
             else:
-                print(f"  I couldn't generate the answer: {str(e)[:160]}\n")
+                print(f"  No pude generar la respuesta: {str(e)[:160]}\n")
             continue
 
-        print(f"\nAgent> {response.text}\n")
-        print("  Sources used (cosine similarity):")
+        print(f"\nAgente> {response.text}\n")
+        print("  Fuentes usadas (similitud coseno):")
         for meta, distance in zip(metas, distances):
-            print(f"    - {meta['source']}   (distance {distance:.3f})")
+            print(f"    - {meta['source']}   (distancia {distance:.3f})")
         print()
 
 

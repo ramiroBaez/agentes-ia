@@ -22,6 +22,7 @@ Usage:
 """
 
 import operator
+import sys
 from typing import Annotated, TypedDict
 
 from google.genai import types
@@ -41,7 +42,10 @@ SYSTEM_PROMPT = (
     "(SELECT). The tables are PascalCase and need double quotes in Postgres "
     "(e.g. FROM \"Estudiante\", NOT FROM Estudiante). If you don't know which "
     "tables exist, run query with "
-    "SELECT table_name FROM information_schema.tables WHERE table_schema='public'."
+    "SELECT table_name FROM information_schema.tables WHERE table_schema='public'.\n"
+    "ALWAYS answer in Spanish, because the user is Spanish-speaking. The "
+    "products and the table names stay in English, but the answer and the "
+    "explanations must be in Spanish."
 )
 
 # ------------------------------------------------------ store tools (from P5)
@@ -63,7 +67,7 @@ def search_product(term: str) -> str:
     """Search the catalog by partial text or list the full catalog."""
     t = term.lower().strip()
     if t in ("", "all", "everything", "*", "list", "catalog"):
-        return "Full catalog:\n" + "\n".join(
+        return "Catálogo completo:\n" + "\n".join(
             f"- {name}: ${data['price']:,.2f} (stock: {data['stock']})"
             for name, data in CATALOG.items()
         )
@@ -73,34 +77,34 @@ def search_product(term: str) -> str:
         if t in name
     ]
     if not matches:
-        return f"No products found containing '{term}'."
-    return "Products found:\n" + "\n".join(matches)
+        return f"No encontré productos que contengan '{term}'."
+    return "Productos encontrados:\n" + "\n".join(matches)
 
 
 def check_stock(name: str) -> str:
     """Return the available stock of an exact catalog product."""
     data = CATALOG.get(name.lower().strip())
     if not data:
-        return f"I don't have '{name}' in the catalog."
-    return f"Stock of '{name}': {data['stock']} units."
+        return f"No tengo '{name}' en el catálogo."
+    return f"Stock de '{name}': {data['stock']} unidades."
 
 
 def calc_total(product: str, quantity: int) -> str:
     """Calculate subtotal, VAT and total for buying a quantity of a product."""
     data = CATALOG.get(product.lower().strip())
     if not data:
-        return f"I don't have '{product}' in the catalog."
+        return f"No tengo '{product}' en el catálogo."
     if quantity <= 0:
-        return "The quantity must be greater than zero."
+        return "La cantidad debe ser mayor que cero."
     subtotal = data["price"] * quantity
     vat = subtotal * VAT
     total = subtotal + vat
     return (
-        f"Product: {product.lower().strip()}\n"
-        f"Unit price: ${data['price']:,.2f}\n"
-        f"Quantity: {quantity}\n"
+        f"Producto: {product.lower().strip()}\n"
+        f"Precio unitario: ${data['price']:,.2f}\n"
+        f"Cantidad: {quantity}\n"
         f"Subtotal: ${subtotal:,.2f}\n"
-        f"VAT ({VAT * 100:.0f}%): ${vat:,.2f}\n"
+        f"IVA ({VAT * 100:.0f}%): ${vat:,.2f}\n"
         f"Total: ${total:,.2f}"
     )
 
@@ -110,8 +114,8 @@ def apply_coupon(code: str) -> str:
     code = code.strip().upper()
     discount = COUPONS.get(code)
     if discount is None:
-        return f"Coupon '{code}' is not valid or has expired."
-    return f"Coupon '{code}' is valid: {discount * 100:.0f}% discount."
+        return f"El cupón '{code}' no es válido o está vencido."
+    return f"Cupón '{code}' válido: otorga un {discount * 100:.0f}% de descuento."
 
 
 search_decl = types.FunctionDeclaration(
@@ -207,19 +211,19 @@ def summarize_turn(turn) -> str:
     """What the model decided this turn: call tools or reply in text."""
     calls = turn.get("calls", [])
     if calls:
-        return "call tool(s): " + ", ".join(c["name"] for c in calls)
-    return "reply in text"
+        return "llamar herramienta(s): " + ", ".join(c["name"] for c in calls)
+    return "responder en texto"
 
 
 def agent_node(state: State) -> dict:
     """'Reason' node: asks the model and appends its turn to the history."""
-    print(f"  [Agent node] Asking the model (memory: {len(state['messages'])} messages)...")
+    print(f"  [Nodo agente] Consultando al modelo (memoria: {len(state['messages'])} mensajes)...")
     turn = provider.chat(
         state["messages"],
         system=SYSTEM_PROMPT,
         funcs=FUNCTIONS,
     )
-    print(f"  [Agent node] Model decided: {summarize_turn(turn)} (provider: {provider.LAST_PROVIDER})")
+    print(f"  [Nodo agente] El modelo decidió: {summarize_turn(turn)} (proveedor: {provider.LAST_PROVIDER})")
     return {"messages": [turn]}
 
 
@@ -228,14 +232,14 @@ def tools_node(state: State) -> dict:
     agent_turn = state["messages"][-1]
     results = []
     for call in agent_turn["calls"]:
-        print(f"  [Tools node] Running {call['name']} with {call['args']}")
+        print(f"  [Nodo herramientas] Ejecutando {call['name']} con {call['args']}")
         func = TOOLS.get(call["name"])
         try:
             result = func(**(call["args"] or {}))
         except Exception as e:
-            result = f"Error executing the tool {call['name']}: {e}"
+            result = f"Error al ejecutar la herramienta {call['name']}: {e}"
         preview = str(result)
-        print(f"  [Tools node] Result: {preview[:400]}{'...' if len(preview) > 400 else ''}")
+        print(f"  [Nodo herramientas] Resultado: {preview[:400]}{'...' if len(preview) > 400 else ''}")
         results.append(
             {
                 "id": call["id"],
@@ -273,6 +277,8 @@ def build_graph():
 
 def main():
     global FUNCTIONS, TOOLS
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     # The store tools (declared above) plus the MCP 'query' tool discovered at
     # runtime. Assembled here AFTER connect(): the MCP declarations only exist
     # once the server is up.
@@ -286,22 +292,22 @@ def main():
     }
 
     graph = build_graph()
-    print(f"Providers (with fallback): {', '.join(provider.PROVIDERS)}")
+    print(f"Proveedores (con respaldo): {', '.join(provider.PROVIDERS)}")
     run_config = {
         "configurable": {"thread_id": "customer-session"},
         "recursion_limit": 10,
     }
 
-    print("Store + Postgres agent via MCP (LangGraph). What do you need?")
-    print("Try: 'what tables exist?' · 'how many students?' · 'how much for 2 laptops?'")
-    print("Type 'quit' to end the session.\n")
+    print("Agente de tienda + Postgres vía MCP (LangGraph). ¿Qué necesitás?")
+    print("Ej.: '¿qué tablas existen?' · '¿cuántos estudiantes hay?' · '¿cuánto por 2 laptops?'")
+    print("Escribí 'salir' para terminar la sesión.\n")
 
     while True:
-        question = input("You> ").strip()
+        question = input("Vos> ").strip()
         if not question:
             continue
-        if question.lower() in ("quit", "exit", "q", "salir"):
-            print("See you next time!")
+        if question.lower() in ("salir", "exit", "quit", "q"):
+            print("¡Hasta la próxima!")
             break
 
         try:
@@ -310,7 +316,7 @@ def main():
                 config=run_config,
             )
         except Exception as e:
-            print(f"  [Error] Could not process the question: {str(e)[:160]}\n")
+            print(f"  [Error] No pude procesar la pregunta: {str(e)[:160]}\n")
             continue
 
         messages = result["messages"]
@@ -318,7 +324,7 @@ def main():
             (m for m in reversed(messages) if m["role"] == "agent"), None
         )
         if last_agent is not None and last_agent.get("text"):
-            print(f"Agent> {last_agent['text']}\n")
+            print(f"Agente> {last_agent['text']}\n")
 
 
 if __name__ == "__main__":

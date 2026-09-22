@@ -1,149 +1,6 @@
-# Project 7 — Consume an existing MCP server (Postgres) / Proyecto 7 — Consumir un servidor MCP existente (Postgres)
+# Proyecto 7 — Consumir un servidor MCP existente (Postgres) / Project 7 — Consume an existing MCP server (Postgres)
 
-**🌐 Language / Idioma:** [English](#english) · [Español](#español)
-
----
-
-<a id="english"></a>
-## 🇬🇧 English
-
-### Overview
-
-Until now every tool of the agent was written by us. This project breaks that: the agent connects to an **MCP server we did NOT write** — `@modelcontextprotocol/server-postgres`, from the community — and the tools that server exposes appear as **just another tool** of the LangGraph agent, exactly like first-class function calling.
-
-The agent mixes both worlds:
-
-- the **4 store tools** (search, stock, exact money calculations, coupons) from Project 5, and
-- the **`query` tool** the MCP Postgres server exposes (READ-ONLY SQL against a real database).
-
-As always, **the model decides** when to run SQL through MCP and when to use the local store tools. The framework's ReAct loop orchestrates everything — the MCP call is just another step in the graph.
-
-The database is **self-contained**: the project ships a `docker-compose.yml` with a Postgres and an auto-loaded seed (tiny academic system: students, courses, subjects). No external database or credentials required. Of course, you can point `MCP_CONNECTION_STRING` at any other Postgres.
-
-### How it works
-
-Two programs, one standard:
-
-```
-your agent (LangGraph, sync)
-   │  mcp_client.execute("query", sql=...)
-   ▼
-MCP client (mcp SDK, async) — one asyncio task on a background thread
-   │  stdio: tools.call
-   ▼
-@modelcontextprotocol/server-postgres  ← subprocess launched with npx
-   │  SELECT ...
-   ▼
-Postgres in Docker (localhost:5432/demo_libreria)
-```
-
-- **MCP server**: `@modelcontextprotocol/server-postgres` runs as a **subprocess** launched with `npx`, receiving the connection string as an argument. It knows nothing about our agent; it just waits for MCP requests over **stdin/stdout**.
-- **MCP client** (`mcp_client.py`): with the official `mcp` SDK it connects over stdio, and at startup **lists the tools** the server exposes (`tools/list`), converting them to `FunctionDeclaration` (plain JSON schema, as usual). To run one it uses `session.call_tool(name, arguments)`.
-
-The nice thing about the standard: the Postgres MCP server exposes **a single `query` tool** with an `sql` parameter and a *"Run a read-only SQL query"* description. That is the whole integration — we discover it and use it.
-
-### The async → sync bridge (the interesting part)
-
-The `mcp` SDK is 100% async, but LangGraph nodes are sync. The bridge:
-
-- an **event loop on a background thread**, holding the MCP session open (no reconnect per tool);
-- **ALL of the MCP lifecycle runs inside ONE asyncio task** (`_loop_main`): it opens the subprocess and session, serves requests in a `while True` over an `asyncio.Queue`, and does the teardown on close. This is key: the `stdio_client` context manager cannot be opened and closed from different tasks (anyio raises *"Attempted to exit cancel scope in a different task"*), and if the garbage collector closes the generator, the session dies ("Connection closed");
-- the sync layer schedules each request with `_loop.call_soon_threadsafe(queue.put_nowait, ...)` — **not** `Queue.put_nowait` from another thread, which is not thread-safe — and waits on a `concurrent.futures.Future`.
-
-So `execute()` stays a plain function the dispatch can call just like `search_product`.
-
-### The self-contained demo database
-
-```bash
-docker compose up -d          # from this folder
-```
-
-- Spins up `postgres:16-alpine` on `localhost:5432`.
-- `db/seed.sql` runs **automatically the first time** the volume is created (Postgres `/docker-entrypoint-initdb.d`), loading a tiny academic system: `Estudiante` (6 students), `Curso` (3 courses), `Materia` (4 subjects).
-- Tables are **PascalCase on purpose** — a nice lesson: in Postgres, quoted identifiers (`"Estudiante"`) are case-sensitive, unquoted ones are folded to lowercase (`estudiante`). The agent prompt reinforces this so the model quotes table names correctly.
-- Demo credentials are baked into the compose (visible on purpose); they match the default `MCP_CONNECTION_STRING` in `mcp_client.py`, so you don't need a `.env` for the database at all.
-
-To regenerate the demo data: `docker compose down -v && docker compose up -d`.
-
-### Getting started
-
-From the repo root (after the initial setup in the root `README.md`):
-
-```bash
-cd 07-consume-mcp-server
-docker compose up -d                             # Postgres + seed (one time)
-venv\Scripts\python.exe mcp_client.py --tools    # see the tools the server exposes
-venv\Scripts\python.exe mcp_agent.py             # the agent
-```
-
-Point it at any other Postgres by setting `MCP_CONNECTION_STRING` in your `.env`:
-
-```ini
-# .env — only if you want a database other than the demo one
-MCP_CONNECTION_STRING=postgresql://user:pass@host:5432/database
-```
-
-### Example session
-
-Real output against the project's demo database (provider chain `PROVIDERS=gemini,groq,openrouter`):
-
-```
-  [MCP] Server @modelcontextprotocol/server-postgres · db: localhost:5432/demo_libreria
-  [MCP] Tools available: query
-Providers (with fallback): gemini, groq, openrouter
-Store + Postgres agent via MCP (LangGraph). What do you need?
-
-You> How many students are there?
-
-  [Agent node] Model decided: call tool(s): query
-  [Tools node] Running query with {'sql': 'SELECT COUNT(*) FROM "Estudiante"'}
-  [Tools node] Result: [ {"count": "6"} ]
-  [Agent node] Model decided: reply in text
-Agent> There are 6 students in the database.
-
-You> List the courses.
-
-  [Agent node] Model decided: call tool(s): query
-  [Tools node] Running query with {'sql': 'SELECT "nombre", "nivel" FROM "Curso"'}
-  [Agent node] Model decided: reply in text
-Agent> The database has 3 courses, all "Ingenieria en Sistemas" (1st, 2nd and 3rd year).
-
-You> How much for 2 laptops?
-
-  [Agent node] Model decided: call tool(s): search_product, calc_total
-  [Tools node] Running search_product with {'term': 'laptop'}
-  [Tools node] Running calc_total with {'quantity': 2, 'product': 'laptop'}
-  [Agent node] Model decided: reply in text
-Agent> 2 laptops cost $1,330,997.58 total (VAT included).
-```
-
-Note how one question chains two tools (search, then calculate) entirely from the store, while the database questions go through the external `query` tool — the model picks.
-
-### Try it
-
-- `What tables exist?` → MCP branch: `query` + `information_schema`.
-- `How many students?` / `List the courses.` → MCP branch: `query`.
-- `How much for 2 laptops?` → store branch (`calc_total`), no DB involved.
-- `And what was the total I asked about?` → **memory** (checkpointer).
-
-### Files
-
-```
-07-consume-mcp-server/
-├── docker-compose.yml     # self-contained Postgres (demo credentials)
-├── db/seed.sql            # auto-loaded demo data (students, courses, subjects)
-├── mcp_client.py          # MCP client: one async task + thread-safe queue, tool discovery
-├── mcp_agent.py           # store agent + the external MCP 'query' tool
-└── provider.py            # multi-provider adapter (gemini | groq | openrouter)
-```
-
-### Skills covered
-
-- Connecting to a **community MCP server** (Postgres) via the official `mcp` SDK over stdio
-- **Automatic tool discovery**: `tools/list` → `FunctionDeclaration`, no hand-written integration
-- The **async → sync bridge**: one asyncio task + `call_soon_threadsafe` queue + `concurrent.futures.Future`
-- A **self-contained demo database** (Docker Compose + auto seed) so the project runs without external credentials
-- READ-ONLY safety: write tools of the server are filtered out (`BLOCKED`)
+**🌐 Idioma / Language:** [Español](#español) · [English](#english)
 
 ---
 
@@ -231,43 +88,43 @@ MCP_CONNECTION_STRING=postgresql://usuario:pass@host:5432/database
 Salida real contra la base de demo del proyecto (cadena `PROVIDERS=gemini,groq,openrouter`):
 
 ```
-  [MCP] Server @modelcontextprotocol/server-postgres · db: localhost:5432/demo_libreria
-  [MCP] Tools available: query
-Providers (with fallback): gemini, groq, openrouter
-Store + Postgres agent via MCP (LangGraph). What do you need?
+  [MCP] Servidor @modelcontextprotocol/server-postgres · db: localhost:5432/demo_libreria
+  [MCP] Herramientas disponibles: query
+Proveedores (con respaldo): gemini, groq, openrouter
+Agente de tienda + Postgres vía MCP (LangGraph). ¿Qué necesitás?
+Ej.: '¿qué tablas existen?' · '¿cuántos estudiantes hay?' · '¿cuánto por 2 laptops?'
 
-You> How many students are there?
+Vos> ¿Cuántos estudiantes hay?
+  [Nodo agente] El modelo decidió: llamar herramienta(s): query
+  [Nodo herramientas] Ejecutando query con {'sql': 'SELECT COUNT(*) AS total FROM "Estudiante";'}
+  [Nodo herramientas] Resultado: [ { "total": "6" } ]
+  [Nodo agente] El modelo decidió: responder en texto
+Agente> En el sistema hay **6 estudiantes** registrados.
 
-  [Agent node] Model decided: call tool(s): query
-  [Tools node] Running query with {'sql': 'SELECT COUNT(*) FROM "Estudiante"'}
-  [Tools node] Result: [ {"count": "6"} ]
-  [Agent node] Model decided: reply in text
-Agent> There are 6 students in the database.
+Vos> Listame los cursos.
+  [Nodo agente] El modelo decidió: llamar herramienta(s): query
+  [Nodo herramientas] Ejecutando query con {'sql': 'SELECT "nombre", "nivel" FROM "Curso"'}
+  [Nodo agente] El modelo decidió: responder en texto
+Agente> La base tiene 3 cursos, todos de "Ingeniería en Sistemas" (1º, 2º y 3º año).
 
-You> List the courses.
-
-  [Agent node] Model decided: call tool(s): query
-  [Tools node] Running query with {'sql': 'SELECT "nombre", "nivel" FROM "Curso"'}
-  [Agent node] Model decided: reply in text
-Agent> The database has 3 courses, all "Ingenieria en Sistemas" (1st, 2nd and 3rd year).
-
-You> How much for 2 laptops?
-
-  [Agent node] Model decided: call tool(s): search_product, calc_total
-  [Tools node] Running search_product with {'term': 'laptop'}
-  [Tools node] Running calc_total with {'quantity': 2, 'product': 'laptop'}
-  [Agent node] Model decided: reply in text
-Agent> 2 laptops cost $1,330,997.58 total (VAT included).
+Vos> ¿Cuánto cuestan 2 laptops?
+  [Nodo agente] El modelo decidió: llamar herramienta(s): search_product, calc_total
+  [Nodo herramientas] Ejecutando search_product con {'term': 'laptop'}
+  [Nodo herramientas] Ejecutando calc_total con {'quantity': 2, 'product': 'laptop'}
+  [Nodo agente] El modelo decidió: responder en texto
+Agente> 2 laptops cuestan $1,330,997.58 en total (IVA incluido).
 ```
 
-Notá cómo una pregunta encadena dos tools (buscar y calcular) solo de la tienda, mientras que las preguntas de la base van por la tool `query` externa — elige el modelo.
+El agente responde siempre en español (el prompt de sistema se lo pide); el código, los identificadores y los docstrings quedan en inglés. Notá cómo una pregunta encadena dos tools (buscar y calcular) solo de la tienda, mientras que las preguntas de la base van por la tool `query` externa — elige el modelo.
+
+> **Nota de consola en Windows:** si la consola muestra caracteres raros (acentos/º), es la codepage del terminal, no un bug. El agente reconfigura la salida a UTF-8 para no crashear nunca por encoding (errores de tipo `UnicodeEncodeError`).
 
 ### Preguntas para probar
 
-- `What tables exist?` → rama MCP: `query` + `information_schema`.
-- `How many students?` / `List the courses.` → rama MCP: `query`.
-- `How much for 2 laptops?` → rama tienda (`calc_total`), sin tocar la base.
-- `And what was the total I asked about?` → **memoria** del checkpointer.
+- `¿Qué tablas existen?` → rama MCP: `query` + `information_schema`.
+- `¿Cuántos estudiantes hay?` / `Listame los cursos.` → rama MCP: `query`.
+- `¿Cuánto cuestan 2 laptops?` → rama tienda (`calc_total`), sin tocar la base.
+- `¿Y cuál era el total que te pregunté recién?` → **memoria** del checkpointer.
 
 ### Estructura
 
@@ -287,3 +144,146 @@ Notá cómo una pregunta encadena dos tools (buscar y calcular) solo de la tiend
 - El **puente async → sync**: una sola task asyncio + cola `call_soon_threadsafe` + `concurrent.futures.Future`
 - **Base de datos autocontenida** (Docker Compose + seed automático) para que el proyecto corra sin credenciales externas
 - Seguridad solo lectura: las tools de escritura del servidor se filtran con `BLOCKED`
+
+---
+
+<a id="english"></a>
+## 🇬🇧 English
+
+### Overview
+
+Until now every tool of the agent was written by us. This project breaks that: the agent connects to an **MCP server we did NOT write** — `@modelcontextprotocol/server-postgres`, from the community — and the tools that server exposes appear as **just another tool** of the LangGraph agent, exactly like first-class function calling.
+
+The agent mixes both worlds:
+
+- the **4 store tools** (search, stock, exact money calculations, coupons) from Project 5, and
+- the **`query` tool** the MCP Postgres server exposes (READ-ONLY SQL against a real database).
+
+As always, **the model decides** when to run SQL through MCP and when to use the local store tools. The framework's ReAct loop orchestrates everything — the MCP call is just another step in the graph.
+
+The database is **self-contained**: the project ships a `docker-compose.yml` with a Postgres and an auto-loaded seed (tiny academic system: students, courses, subjects). No external database or credentials required. Of course, you can point `MCP_CONNECTION_STRING` at any other Postgres.
+
+### How it works
+
+Two programs, one standard:
+
+```
+your agent (LangGraph, sync)
+   │  mcp_client.execute("query", sql=...)
+   ▼
+MCP client (mcp SDK, async) — one asyncio task on a background thread
+   │  stdio: tools.call
+   ▼
+@modelcontextprotocol/server-postgres  ← subprocess launched with npx
+   │  SELECT ...
+   ▼
+Postgres in Docker (localhost:5432/demo_libreria)
+```
+
+- **MCP server**: `@modelcontextprotocol/server-postgres` runs as a **subprocess** launched with `npx`, receiving the connection string as an argument. It knows nothing about our agent; it just waits for MCP requests over **stdin/stdout**.
+- **MCP client** (`mcp_client.py`): with the official `mcp` SDK it connects over stdio, and at startup **lists the tools** the server exposes (`tools/list`), converting them to `FunctionDeclaration` (plain JSON schema, as usual). To run one it uses `session.call_tool(name, arguments)`.
+
+The nice thing about the standard: the Postgres MCP server exposes **a single `query` tool** with an `sql` parameter and a *"Run a read-only SQL query"* description. That is the whole integration — we discover it and use it.
+
+### The async → sync bridge (the interesting part)
+
+The `mcp` SDK is 100% async, but LangGraph nodes are sync. The bridge:
+
+- an **event loop on a background thread**, holding the MCP session open (no reconnect per tool);
+- **ALL of the MCP lifecycle runs inside ONE asyncio task** (`_loop_main`): it opens the subprocess and session, serves requests in a `while True` over an `asyncio.Queue`, and does the teardown on close. This is key: the `stdio_client` context manager cannot be opened and closed from different tasks (anyio raises *"Attempted to exit cancel scope in a different task"*), and if the garbage collector closes the generator, the session dies ("Connection closed");
+- the sync layer schedules each request with `_loop.call_soon_threadsafe(queue.put_nowait, ...)` — **not** `Queue.put_nowait` from another thread, which is not thread-safe — and waits on a `concurrent.futures.Future`.
+
+So `execute()` stays a plain function the dispatch can call just like `search_product`.
+
+### The self-contained demo database
+
+```bash
+docker compose up -d          # from this folder
+```
+
+- Spins up `postgres:16-alpine` on `localhost:5432`.
+- `db/seed.sql` runs **automatically the first time** the volume is created (Postgres `/docker-entrypoint-initdb.d`), loading a tiny academic system: `Estudiante` (6 students), `Curso` (3 courses), `Materia` (4 subjects).
+- Tables are **PascalCase on purpose** — a nice lesson: in Postgres, quoted identifiers (`"Estudiante"`) are case-sensitive, unquoted ones are folded to lowercase (`estudiante`). The agent prompt reinforces this so the model quotes table names correctly.
+- Demo credentials are baked into the compose (visible on purpose); they match the default `MCP_CONNECTION_STRING` in `mcp_client.py`, so you don't need a `.env` for the database at all.
+
+To regenerate the demo data: `docker compose down -v && docker compose up -d`.
+
+### Getting started
+
+From the repo root (after the initial setup in the root `README.md`):
+
+```bash
+cd 07-consume-mcp-server
+docker compose up -d                             # Postgres + seed (one time)
+venv\Scripts\python.exe mcp_client.py --tools    # see the tools the server exposes
+venv\Scripts\python.exe mcp_agent.py             # the agent
+```
+
+Point it at any other Postgres by setting `MCP_CONNECTION_STRING` in your `.env`:
+
+```ini
+# .env — only if you want a database other than the demo one
+MCP_CONNECTION_STRING=postgresql://user:pass@host:5432/database
+```
+
+### Example session
+
+Real output against the project's demo database (provider chain `PROVIDERS=gemini,groq,openrouter`):
+
+```
+  [MCP] Servidor @modelcontextprotocol/server-postgres · db: localhost:5432/demo_libreria
+  [MCP] Herramientas disponibles: query
+Proveedores (con respaldo): gemini, groq, openrouter
+Agente de tienda + Postgres vía MCP (LangGraph). ¿Qué necesitás?
+Ej.: '¿qué tablas existen?' · '¿cuántos estudiantes hay?' · '¿cuánto por 2 laptops?'
+
+Vos> ¿Cuántos estudiantes hay?
+  [Nodo agente] El modelo decidió: llamar herramienta(s): query
+  [Nodo herramientas] Ejecutando query con {'sql': 'SELECT COUNT(*) AS total FROM "Estudiante";'}
+  [Nodo herramientas] Resultado: [ { "total": "6" } ]
+  [Nodo agente] El modelo decidió: responder en texto
+Agente> En el sistema hay **6 estudiantes** registrados.
+
+Vos> Listame los cursos.
+  [Nodo agente] El modelo decidió: llamar herramienta(s): query
+  [Nodo herramientas] Ejecutando query con {'sql': 'SELECT "nombre", "nivel" FROM "Curso"'}
+  [Nodo agente] El modelo decidió: responder en texto
+Agente> La base tiene 3 cursos, todos de "Ingeniería en Sistemas" (1º, 2º y 3º año).
+
+Vos> ¿Cuánto cuestan 2 laptops?
+  [Nodo agente] El modelo decidió: llamar herramienta(s): search_product, calc_total
+  [Nodo herramientas] Ejecutando search_product con {'term': 'laptop'}
+  [Nodo herramientas] Ejecutando calc_total con {'quantity': 2, 'product': 'laptop'}
+  [Nodo agente] El modelo decidió: responder en texto
+Agente> 2 laptops cuestan $1,330,997.58 en total (IVA incluido).
+```
+
+> Note: the demo console output is in Spanish (the repo targets Spanish-speaking audiences; the system prompt tells the model to answer in Spanish), but the code, identifiers and docstrings stay in English — the industry standard.
+
+Note how one question chains two tools (search, then calculate) entirely from the store, while the database questions go through the external `query` tool — the model picks.
+
+### Try it
+
+- `What tables exist?` → MCP branch: `query` + `information_schema`.
+- `How many students?` / `List the courses.` → MCP branch: `query`.
+- `How much for 2 laptops?` → store branch (`calc_total`), no DB involved.
+- `And what was the total I asked about?` → **memory** (checkpointer).
+
+### Files
+
+```
+07-consume-mcp-server/
+├── docker-compose.yml     # self-contained Postgres (demo credentials)
+├── db/seed.sql            # auto-loaded demo data (students, courses, subjects)
+├── mcp_client.py          # MCP client: one async task + thread-safe queue, tool discovery
+├── mcp_agent.py           # store agent + the external MCP 'query' tool
+└── provider.py            # multi-provider adapter (gemini | groq | openrouter)
+```
+
+### Skills covered
+
+- Connecting to a **community MCP server** (Postgres) via the official `mcp` SDK over stdio
+- **Automatic tool discovery**: `tools/list` → `FunctionDeclaration`, no hand-written integration
+- The **async → sync bridge**: one asyncio task + `call_soon_threadsafe` queue + `concurrent.futures.Future`
+- A **self-contained demo database** (Docker Compose + auto seed) so the project runs without external credentials
+- READ-ONLY safety: write tools of the server are filtered out (`BLOCKED`)

@@ -19,6 +19,7 @@ Usage:
 
 import argparse
 import operator
+import sys
 from typing import Annotated, TypedDict
 
 from google.genai import types
@@ -38,7 +39,10 @@ SYSTEM_PROMPT = (
     "ReAct, RAG, MCP, prompt engineering, frameworks, production, security, "
     "multi-agent...) ALWAYS use search_notes to retrieve the real information "
     "and answer citing what it returns; if the notes don't contain it, say so "
-    "honestly."
+    "honestly.\n"
+    "ALWAYS answer in Spanish, because the user and the study notes are in "
+    "Spanish. The products stay in English, but the answer and the "
+    "explanations must be in Spanish."
 )
 
 # ---------------------------------------------------------------- store tools (from P5)
@@ -60,7 +64,7 @@ def search_product(term: str) -> str:
     """Search the catalog by partial text or list the full catalog."""
     t = term.lower().strip()
     if t in ("", "all", "everything", "*", "list", "catalog"):
-        return "Full catalog:\n" + "\n".join(
+        return "Catálogo completo:\n" + "\n".join(
             f"- {name}: ${data['price']:,.2f} (stock: {data['stock']})"
             for name, data in CATALOG.items()
         )
@@ -70,34 +74,34 @@ def search_product(term: str) -> str:
         if t in name
     ]
     if not matches:
-        return f"No products found containing '{term}'."
-    return "Products found:\n" + "\n".join(matches)
+        return f"No encontré productos que contengan '{term}'."
+    return "Productos encontrados:\n" + "\n".join(matches)
 
 
 def check_stock(name: str) -> str:
     """Return the available stock of an exact catalog product."""
     data = CATALOG.get(name.lower().strip())
     if not data:
-        return f"I don't have '{name}' in the catalog."
-    return f"Stock of '{name}': {data['stock']} units."
+        return f"No tengo '{name}' en el catálogo."
+    return f"Stock de '{name}': {data['stock']} unidades."
 
 
 def calc_total(product: str, quantity: int) -> str:
     """Calculate subtotal, VAT and total for buying a quantity of a product."""
     data = CATALOG.get(product.lower().strip())
     if not data:
-        return f"I don't have '{product}' in the catalog."
+        return f"No tengo '{product}' en el catálogo."
     if quantity <= 0:
-        return "The quantity must be greater than zero."
+        return "La cantidad debe ser mayor que cero."
     subtotal = data["price"] * quantity
     vat = subtotal * VAT
     total = subtotal + vat
     return (
-        f"Product: {product.lower().strip()}\n"
-        f"Unit price: ${data['price']:,.2f}\n"
-        f"Quantity: {quantity}\n"
+        f"Producto: {product.lower().strip()}\n"
+        f"Precio unitario: ${data['price']:,.2f}\n"
+        f"Cantidad: {quantity}\n"
         f"Subtotal: ${subtotal:,.2f}\n"
-        f"VAT ({VAT * 100:.0f}%): ${vat:,.2f}\n"
+        f"IVA ({VAT * 100:.0f}%): ${vat:,.2f}\n"
         f"Total: ${total:,.2f}"
     )
 
@@ -107,8 +111,8 @@ def apply_coupon(code: str) -> str:
     code = code.strip().upper()
     discount = COUPONS.get(code)
     if discount is None:
-        return f"Coupon '{code}' is not valid or has expired."
-    return f"Coupon '{code}' is valid: {discount * 100:.0f}% discount."
+        return f"El cupón '{code}' no es válido o está vencido."
+    return f"Cupón '{code}' válido: otorga un {discount * 100:.0f}% de descuento."
 
 
 search_decl = types.FunctionDeclaration(
@@ -195,15 +199,15 @@ ACTIVE_COLLECTION = None
 def search_notes(query: str) -> str:
     """Search the query in the AI Agents notes and return the most relevant chunks."""
     if ACTIVE_COLLECTION is None:
-        return "The notes index is not initialized."
+        return "El índice de notas no está inicializado."
     try:
         results = rag.retrieve(ACTIVE_COLLECTION, query, top_k=4)
     except Exception as e:
-        return f"Error searching the notes: {str(e)[:150]}"
+        return f"Error al buscar en las notas: {str(e)[:150]}"
     if not results:
-        return "I found nothing in the notes for that query."
+        return "No encontré nada en las notas para esa consulta."
     return "\n\n---\n\n".join(
-        f"[{r['source']}] (distance {r['distance']:.3f})\n{r['text']}"
+        f"[{r['source']}] (distancia {r['distance']:.3f})\n{r['text']}"
         for r in results
     )
 
@@ -251,19 +255,19 @@ def summarize_turn(turn) -> str:
     """What the model decided this turn: call tools or reply in text."""
     calls = turn.get("calls", [])
     if calls:
-        return "call tool(s): " + ", ".join(c["name"] for c in calls)
-    return "reply in text"
+        return "llamar herramienta(s): " + ", ".join(c["name"] for c in calls)
+    return "responder en texto"
 
 
 def agent_node(state: State) -> dict:
     """'Reason' node: asks the model and appends its turn to the history."""
-    print(f"  [Agent node] Asking the model (memory: {len(state['messages'])} messages)...")
+    print(f"  [Nodo agente] Consultando al modelo (memoria: {len(state['messages'])} mensajes)...")
     turn = provider.chat(
         state["messages"],
         system=SYSTEM_PROMPT,
         funcs=FUNCTIONS,
     )
-    print(f"  [Agent node] Model decided: {summarize_turn(turn)} (provider: {provider.LAST_PROVIDER})")
+    print(f"  [Nodo agente] El modelo decidió: {summarize_turn(turn)} (proveedor: {provider.LAST_PROVIDER})")
     return {"messages": [turn]}
 
 
@@ -272,14 +276,14 @@ def tools_node(state: State) -> dict:
     agent_turn = state["messages"][-1]
     results = []
     for call in agent_turn["calls"]:
-        print(f"  [Tools node] Running {call['name']} with {call['args']}")
+        print(f"  [Nodo herramientas] Ejecutando {call['name']} con {call['args']}")
         func = TOOLS.get(call["name"])
         try:
             result = func(**(call["args"] or {}))
         except Exception as e:
-            result = f"Error executing the tool {call['name']}: {e}"
+            result = f"Error al ejecutar la herramienta {call['name']}: {e}"
         preview = str(result)
-        print(f"  [Tools node] Result: {preview[:400]}{'...' if len(preview) > 400 else ''}")
+        print(f"  [Nodo herramientas] Resultado: {preview[:400]}{'...' if len(preview) > 400 else ''}")
         results.append(
             {
                 "id": call["id"],
@@ -316,36 +320,38 @@ def build_graph():
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     global ACTIVE_COLLECTION
     parser = argparse.ArgumentParser(
-        description="Framework agent + a RAG tool over the course notes."
+        description="Agente con framework + una herramienta RAG sobre las notas del curso."
     )
     parser.add_argument(
         "--reindex",
         action="store_true",
-        help="Rebuild the notes index from scratch before chatting.",
+        help="Reconstruir el índice de notas desde cero antes de chatear.",
     )
     args = parser.parse_args()
 
     ACTIVE_COLLECTION = rag.get_collection(args.reindex)
 
     graph = build_graph()
-    print(f"Providers (with fallback): {', '.join(provider.PROVIDERS)}")
+    print(f"Proveedores (con respaldo): {', '.join(provider.PROVIDERS)}")
     run_config = {
         "configurable": {"thread_id": "customer-session"},
         "recursion_limit": 10,
     }
 
-    print("Store + notes agent (LangGraph + RAG). What do you need?")
-    print("Try: 'What is MCP?' · 'how much for 2 monitors?'")
-    print("Type 'quit' to end the session.\n")
+    print("Agente de tienda + notas (LangGraph + RAG). ¿Qué necesitás?")
+    print("Ej.: '¿Qué es MCP?' · '¿cuánto cuestan 2 monitores?'")
+    print("Escribí 'salir' para terminar la sesión.\n")
 
     while True:
-        question = input("You> ").strip()
+        question = input("Vos> ").strip()
         if not question:
             continue
-        if question.lower() in ("quit", "exit", "q", "salir"):
-            print("See you next time!")
+        if question.lower() in ("salir", "exit", "quit", "q"):
+            print("¡Hasta la próxima!")
             break
 
         try:
@@ -354,7 +360,7 @@ def main():
                 config=run_config,
             )
         except Exception as e:
-            print(f"  [Error] Could not process the question: {str(e)[:160]}\n")
+            print(f"  [Error] No pude procesar la pregunta: {str(e)[:160]}\n")
             continue
 
         messages = result["messages"]
@@ -362,7 +368,7 @@ def main():
             (m for m in reversed(messages) if m["role"] == "agent"), None
         )
         if last_agent is not None and last_agent.get("text"):
-            print(f"Agent> {last_agent['text']}\n")
+            print(f"Agente> {last_agent['text']}\n")
 
 
 if __name__ == "__main__":

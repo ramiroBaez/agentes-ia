@@ -81,8 +81,8 @@ def embed(texts: list[str]) -> list[list[float]]:
                 break
             except Exception as e:
                 print(
-                    f"  [Embeddings batch {len(vectors) // EMBEDDING_BATCH + 1}: error "
-                    f"(attempt {attempt}/5): {str(e)[:90]}]"
+                    f"  [Lote de embeddings {len(vectors) // EMBEDDING_BATCH + 1}: error "
+                    f"(intento {attempt}/5): {str(e)[:90]}]"
                 )
                 if attempt == 5:
                     raise
@@ -123,7 +123,7 @@ def read_documents() -> list[tuple[str, str]]:
 
 def index(collection):
     """Chunk, embed and store the documents in the Chroma collection."""
-    print("Indexing the knowledge base...")
+    print("Indexando la base de conocimiento...")
     documents = read_documents()
 
     chunks = []
@@ -135,18 +135,18 @@ def index(collection):
             ids.append(f"{name}#{i}")
             metadatas.append({"source": name, "position": i})
 
-    print(f"Documents: {len(documents)} | Chunks: {len(chunks)}")
-    print("Converting chunks to embeddings...")
+    print(f"Documentos: {len(documents)} | Fragmentos: {len(chunks)}")
+    print("Convirtiendo fragmentos en embeddings...")
     vectors = embed(chunks)
 
-    print("Saving to ChromaDB...")
+    print("Guardando en ChromaDB...")
     collection.add(
         ids=ids,
         documents=chunks,
         embeddings=vectors,
         metadatas=metadatas,
     )
-    print(f"Index ready: {collection.count()} chunks.\n")
+    print(f"Índice listo: {collection.count()} fragmentos.\n")
 
 
 def get_collection(reindex: bool = False):
@@ -158,7 +158,7 @@ def get_collection(reindex: bool = False):
     if reindex:
         try:
             persistent.delete_collection(COLLECTION_NAME)
-            print("Previous collection deleted.")
+            print("Colección anterior eliminada.")
         except Exception:
             pass
     collection = persistent.get_or_create_collection(

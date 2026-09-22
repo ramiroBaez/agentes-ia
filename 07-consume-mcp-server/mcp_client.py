@@ -215,8 +215,8 @@ def connect():
         _dispatch[tool.name] = _wrap_tool(tool.name)
     DISPATCH.clear()
     DISPATCH.update(_dispatch)
-    print(f"  [MCP] Server {SERVER_NPM} · db: {CONNECTION_STRING.split('@')[-1]}")
-    print(f"  [MCP] Tools available: {', '.join(t.name for t in mcp_tools)}")
+    print(f"  [MCP] Servidor {SERVER_NPM} · db: {CONNECTION_STRING.split('@')[-1]}")
+    print(f"  [MCP] Herramientas disponibles: {', '.join(t.name for t in mcp_tools)}")
 
 
 def _wrap_tool(name: str):
