@@ -1,0 +1,36 @@
+# Project 7 demo database — self-contained Postgres.
+#
+# The MCP server (@modelcontextprotocol/server-postgres) reads the schema and
+# executes read-only SQL, so the agent can query this database.
+#
+# One command brings everything up (db + auto-loaded seed data):
+#     docker compose up -d          (from this folder)
+#
+# Notes:
+#   - Credentials are DEMO ONLY (visible here on purpose). They match the
+#     default MCP_CONNECTION_STRING in mcp_client.py.
+#   - db/seed.sql runs automatically the FIRST time the volume is created
+#     (Postgres /docker-entrypoint-initdb.d). To regenerate the demo data:
+#     docker compose down -v && docker compose up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mcp-demo-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: demo_libreria
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d demo_libreria"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

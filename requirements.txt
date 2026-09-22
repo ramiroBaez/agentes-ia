@@ -4,3 +4,4 @@ pydantic
 chromadb
 langgraph
 openai
+mcp
