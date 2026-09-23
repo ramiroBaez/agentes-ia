@@ -26,7 +26,7 @@ Cada proyecto se apoya en el anterior y suma una capa nueva de complejidad. Cada
 | 5 | Primer framework de agentes | LangGraph / Pydantic AI, loop ReAct, memoria de corto plazo, respaldo multi-proveedor | ✅ Hecho |
 | 6 | RAG dentro de un agente con framework | Agente con herramienta de recuperación de conocimiento | ✅ Hecho |
 | 7 | Consumir un servidor MCP | Model Context Protocol, herramientas externas | ✅ Hecho |
-| 8 | Servidor MCP propio | Construir y exponer tus propias herramientas vía MCP | Planeado |
+| 8 | Servidor MCP propio | Construir y exponer tus propias herramientas vía MCP | ✅ Hecho |
 | 9 | Orquestación multi-agente | Supervisor + workers especializados, límites de iteraciones | Planeado |
 | 10 | Automatización low-code (n8n) | Flujos visuales, nodos LLM, caso de uso real | Planeado |
 | 11 | Agente en producción | Empaquetado con FastAPI, Docker, deploy en la nube | Planeado |
@@ -81,6 +81,7 @@ agentes-ia/
 ├── 05-first-agent-framework/
 ├── 06-rag-inside-framework/
 ├── 07-consume-mcp-server/
+├── 08-custom-mcp-server/
 ├── ...
 └── README.md             # Este archivo
 ```
@@ -109,7 +110,7 @@ Each project builds on the previous one and adds a new layer of complexity. Ever
 | 5 | First agent framework | LangGraph / Pydantic AI, ReAct loop, short-term memory, multi-provider fallback | ✅ Done |
 | 6 | RAG inside a framework agent | Agent with a knowledge-retrieval tool | ✅ Done |
 | 7 | Consume an MCP server | Model Context Protocol, external tools | ✅ Done |
-| 8 | Custom MCP server | Build and expose your own tools via MCP | Planned |
+| 8 | Custom MCP server | Build and expose your own tools via MCP | ✅ Done |
 | 9 | Multi-agent orchestration | Supervisor + specialized workers, iteration limits | Planned |
 | 10 | Low-code automation (n8n) | Visual workflows, LLM nodes, real-world use case | Planned |
 | 11 | Agent in production | FastAPI packaging, Docker, cloud deploy | Planned |
@@ -164,6 +165,7 @@ agentes-ia/
 ├── 05-first-agent-framework/
 ├── 06-rag-inside-framework/
 ├── 07-consume-mcp-server/
+├── 08-custom-mcp-server/
 ├── ...
 └── README.md             # This file
 ```
