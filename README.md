@@ -28,7 +28,7 @@ Cada proyecto se apoya en el anterior y suma una capa nueva de complejidad. Cada
 | 7 | Consumir un servidor MCP | Model Context Protocol, herramientas externas | ✅ Hecho |
 | 8 | Servidor MCP propio | Construir y exponer tus propias herramientas vía MCP | ✅ Hecho |
 | 9 | Orquestación multi-agente | Supervisor + workers especializados, límites de iteraciones | ✅ Hecho |
-| 10 | Automatización low-code (n8n) | Flujos visuales, nodos LLM, caso de uso real | Planeado |
+| 10 | Automatización low-code (n8n) | Flujos visuales, nodos LLM, caso de uso real | ✅ Hecho |
 | 11 | Agente en producción | Empaquetado con FastAPI, Docker, deploy en la nube | Planeado |
 | 12 | Observabilidad y seguridad | Trazabilidad (LangSmith/Langfuse), rate limiting, human-in-the-loop | Planeado |
 
@@ -83,6 +83,7 @@ agentes-ia/
 ├── 07-consume-mcp-server/
 ├── 08-custom-mcp-server/
 ├── 09-multi-agent-orchestration/
+├── 10-n8n-webhook-ai/
 ├── ...
 └── README.md             # Este archivo
 ```
@@ -113,7 +114,7 @@ Each project builds on the previous one and adds a new layer of complexity. Ever
 | 7 | Consume an MCP server | Model Context Protocol, external tools | ✅ Done |
 | 8 | Custom MCP server | Build and expose your own tools via MCP | ✅ Done |
 | 9 | Multi-agent orchestration | Supervisor + specialized workers, iteration limits | ✅ Done |
-| 10 | Low-code automation (n8n) | Visual workflows, LLM nodes, real-world use case | Planned |
+| 10 | Low-code automation (n8n) | Visual workflows, LLM nodes, real-world use case | ✅ Done |
 | 11 | Agent in production | FastAPI packaging, Docker, cloud deploy | Planned |
 | 12 | Observability & security | Tracing (LangSmith/Langfuse), rate limiting, human-in-the-loop | Planned |
 
@@ -168,6 +169,7 @@ agentes-ia/
 ├── 07-consume-mcp-server/
 ├── 08-custom-mcp-server/
 ├── 09-multi-agent-orchestration/
+├── 10-n8n-webhook-ai/
 ├── ...
 └── README.md             # This file
 ```

@@ -1,0 +1,33 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-proyecto10
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_SECURE_COOKIE=false
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - N8N_RESTRICT_FILE_ACCESS_TO=/data/salidas;/home/node/.n8n-files
+      - GENERIC_TIMEZONE=America/Argentina/Buenos_Aires
+      - TZ=America/Argentina/Buenos_Aires
+      - N8N_USER_FOLDER=/home/node
+      # vars expuestas al flujo vía $env.LLM_* (se definen en .env local; NO incluyen la API key)
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.groq.com/openai/v1/chat/completions}
+      - LLM_MODEL=${LLM_MODEL:-openai/gpt-oss-120b}
+      - LLM_SYSTEM_PROMPT=${LLM_SYSTEM_PROMPT:-Eres un asistente experto en clasificar y resumir consultas de clientes.}
+    volumes:
+      - n8n_data:/home/node/.n8n          # persistencia de workflows y credenciales
+      - ./salidas:/data/salidas            # acá caen los archivos que genera el flujo
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5678/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  n8n_data:
