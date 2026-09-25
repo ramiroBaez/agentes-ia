@@ -1,0 +1,22 @@
+services:
+  agent-api:
+    build:
+      context: ..            # repo root: needs the RAG knowledge base and paths
+      dockerfile: 11-agent-in-production/Dockerfile
+    container_name: agente-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env               # PROVIDERS + API keys + model names (never committed)
+    volumes:
+      # chroma_db MUST be writable: ChromaDB locks/WALs the SQLite store even when
+      # only reading (a :ro mount fails with "attempt to write a readonly database").
+      - ../04-sistema-rag/chroma_db:/app/04-sistema-rag/chroma_db       # RAG index (host → container)
+      - ../04-sistema-rag/notas:/app/04-sistema-rag/notas:ro            # knowledge base
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s

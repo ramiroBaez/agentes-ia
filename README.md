@@ -29,7 +29,7 @@ Cada proyecto se apoya en el anterior y suma una capa nueva de complejidad. Cada
 | 8 | Servidor MCP propio | Construir y exponer tus propias herramientas vía MCP | ✅ Hecho |
 | 9 | Orquestación multi-agente | Supervisor + workers especializados, límites de iteraciones | ✅ Hecho |
 | 10 | Automatización low-code (n8n) | Flujos visuales, nodos LLM, caso de uso real | ✅ Hecho |
-| 11 | Agente en producción | Empaquetado con FastAPI, Docker, deploy en la nube | Planeado |
+| 11 | Agente en producción | API HTTP con FastAPI, empaquetado con Docker, deploy en la nube | ✅ Hecho |
 | 12 | Observabilidad y seguridad | Trazabilidad (LangSmith/Langfuse), rate limiting, human-in-the-loop | Planeado |
 
 ### Roadmap
@@ -66,7 +66,9 @@ Después entrá a la carpeta de cualquier proyecto y seguí su README.
 - **Framework de agentes:** LangGraph (grafos, ramificación condicional, checkpoints)
 - **Validación de datos:** Pydantic
 - **Base vectorial:** ChromaDB
-- **Próximamente:** FastAPI, Docker, Langfuse
+- **API HTTP:** FastAPI + Uvicorn
+- **Contenedores:** Docker (imagen + docker-compose)
+- **Próximamente:** Langfuse
 
 ### Estructura del repositorio
 
@@ -84,6 +86,7 @@ agentes-ia/
 ├── 08-custom-mcp-server/
 ├── 09-multi-agent-orchestration/
 ├── 10-n8n-webhook-ai/
+├── 11-agent-in-production/
 ├── ...
 └── README.md             # Este archivo
 ```
@@ -115,7 +118,7 @@ Each project builds on the previous one and adds a new layer of complexity. Ever
 | 8 | Custom MCP server | Build and expose your own tools via MCP | ✅ Done |
 | 9 | Multi-agent orchestration | Supervisor + specialized workers, iteration limits | ✅ Done |
 | 10 | Low-code automation (n8n) | Visual workflows, LLM nodes, real-world use case | ✅ Done |
-| 11 | Agent in production | FastAPI packaging, Docker, cloud deploy | Planned |
+| 11 | Agent in production | HTTP API with FastAPI, Docker packaging, cloud deploy | ✅ Done |
 | 12 | Observability & security | Tracing (LangSmith/Langfuse), rate limiting, human-in-the-loop | Planned |
 
 ### Roadmap
@@ -152,7 +155,9 @@ The repo targets Spanish-speaking audiences: **all visible demo surface** (conso
 - **Agent framework:** LangGraph (graphs, conditional branching, checkpoints)
 - **Data validation:** Pydantic
 - **Vector database:** ChromaDB
-- **Coming up:** FastAPI, Docker, Langfuse
+- **HTTP API:** FastAPI + Uvicorn
+- **Containers:** Docker (image + docker-compose)
+- **Coming up:** Langfuse
 
 ### Repository layout
 
@@ -170,6 +175,7 @@ agentes-ia/
 ├── 08-custom-mcp-server/
 ├── 09-multi-agent-orchestration/
 ├── 10-n8n-webhook-ai/
+├── 11-agent-in-production/
 ├── ...
 └── README.md             # This file
 ```

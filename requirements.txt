@@ -5,3 +5,5 @@ chromadb
 langgraph
 openai
 mcp
+fastapi
+uvicorn

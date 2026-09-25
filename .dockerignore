@@ -1,0 +1,17 @@
+# Keep the build context (the repo root) light. Mirrors .gitignore and adds
+# Docker-specific excludes. Never bake secrets (.env) or the venv into images.
+venv/
+.venv/
+.git/
+.env
+.env.local
+.env.*.local
+__pycache__/
+*.py[cod]
+*.egg-info/
+chroma_db/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.md~
