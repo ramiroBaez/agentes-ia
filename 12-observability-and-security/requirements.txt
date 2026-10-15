@@ -1,0 +1,30 @@
+# Dependencies of Aurora Shop Ops (Project 12).
+#
+# Pinned to the versions the tests ran against. For development,
+# `pip install -r requirements-dev.txt` on top of this file.
+#
+# What the project really imports, and nothing else:
+#   fastapi/uvicorn/pydantic      the API
+#   langgraph + checkpoint-sqlite  the agent graph and its memory
+#   PyJWT                          the session cookies
+#   prometheus_client              the metrics
+#   google-genai / openai          the model providers (OpenAI-compatible: Groq, OpenRouter)
+#   chromadb + python-dotenv       the RAG over the notes and the .env
+#   redis                          the quota limiter, if REDIS_URL is set
+
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+python-dotenv==1.2.3
+
+langgraph==1.2.12
+langgraph-checkpoint-sqlite==3.1.1
+
+PyJWT==2.14.0
+prometheus_client==0.26.0
+redis==8.1.0
+
+google-genai==2.24.0
+openai==3.16.2
+chromadb==1.5.9

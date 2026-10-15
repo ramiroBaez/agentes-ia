@@ -1,0 +1,62 @@
+# Aurora Shop Ops, same origin: nginx serves the SPA and forwards /api.
+#
+#   docker compose -f 12-observability-and-security/docker-compose.yml up --build
+#   -> http://localhost:8080
+#
+# The first time there is no API key: create one with the command below and
+# paste it into the login screen.
+#
+#   docker compose -f 12-observability-and-security/docker-compose.yml exec api \
+#       python -m cli key --name "Ops" --scopes admin:all --plan pro
+#
+# The values come from a .env next to this file (copy .env.example).
+
+services:
+  api:
+    build:
+      # The repository root: the Dockerfile also copies 04-sistema-rag/notas.
+      context: ..
+      dockerfile: 12-observability-and-security/Dockerfile
+      target: api
+    environment:
+      # In a real deployment, a real secret: if the development one stays,
+      # anybody who knows the repo can sign their own session cookie.
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is missing, copy .env.example to .env}"
+      # The provider chain is picked by model.py from the environment. All the
+      # keys are passed, not only Gemini's: PROVIDERS is a fallback chain and
+      # without this the container would silently lose Groq/OpenRouter.
+      PROVIDERS: ${PROVIDERS:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      GROQ_MODEL: ${GROQ_MODEL:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      REDIS_URL: ${REDIS_URL:-}
+      # The embeddings index lives on the volume: if it stays in the image it is
+      # lost on every rebuild and the whole indexing has to be paid for again.
+      CHROMA_DIR: /data/chroma_db
+      # The origin the browser sends; nginx and the API are the same host.
+      CORS_ORIGINS: '["http://localhost:8080"]'
+    volumes:
+      - data:/data
+    restart: unless-stopped
+    # The API is not published by itself: only nginx sees it. A `ports` here
+    # would give the container a second entrance that skips the header policy.
+    expose:
+      - "8000"
+
+  web:
+    build:
+      context: ..
+      dockerfile: 12-observability-and-security/Dockerfile
+      target: web
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  data:

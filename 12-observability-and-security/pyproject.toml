@@ -1,0 +1,54 @@
+[project]
+name = "aurora-shop-ops"
+version = "0.1.0"
+description = "Project 12 - Agent with observability and security (AI support console)"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--strict-markers --strict-config"
+filterwarnings = [
+    "ignore:`_UnionGenericAlias` is deprecated:DeprecationWarning",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "W",   # warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "SIM", # simplify
+    "S",   # bandit (security)
+    "C4",  # comprehensions
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    # Demo strings (prompts, user-facing messages) are in Spanish on purpose.
+    "RUF001", "RUF002", "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# pytest uses assert on purpose
+"tests/*" = ["S101", "S105", "S106"]
+# Adapted copies of earlier projects (P5/P6/P7): kept as close as possible to
+# the original so they can be compared, so the strict style of the new code is
+# not enforced on them.
+"model.py" = ["E501", "S608", "S110", "UP017", "B905", "C420", "SIM117"]
+"rag.py" = ["E501", "S608", "S110", "UP017", "B905", "C420", "SIM117"]
+"store.py" = ["E501", "UP017"]
+"notes.py" = ["E501", "UP017"]
+# FastAPI *requires* declaring dependencies with `Depends(...)` as the parameter
+# default (that is how injection is resolved), so B008 does not apply here.
+"api.py" = ["B008"]
+# The development secret is a documented default that production refuses to start with.
+"settings.py" = ["S105"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent", "security", "traces", "persistence", "settings", "guardrails", "metrics", "model", "store", "notes", "rag", "pii", "api", "cli"]

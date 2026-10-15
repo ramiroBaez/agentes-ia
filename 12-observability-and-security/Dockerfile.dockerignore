@@ -1,0 +1,44 @@
+# Build context = repository root (see Dockerfile). Keep it light and never bake
+# secrets into the image. BuildKit picks this file up because it is named after
+# the Dockerfile.
+
+**/.git
+**/venv
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.coverage
+**/htmlcov
+
+# Secrets do not go into the image: the compose file passes them as environment.
+**/.env
+**/.env.local
+**/.env.*.local
+
+# The database and the index live on a volume, not in the image.
+**/*.db
+**/*.db-wal
+**/*.db-shm
+**/chroma_db
+
+# The SPA is compiled inside the build: node_modules weighs more than the rest.
+**/node_modules
+**/dist
+
+# Only what the three Dockerfile stages COPY is needed from the repository:
+# this project and 04-sistema-rag/notas. Everything else is dead weight.
+01-function-calling
+02-agent-multi-tools
+03-structured-output
+05-first-agent-framework
+06-rag-inside-framework
+07-consume-mcp-server
+08-custom-mcp-server
+09-multi-agent-orchestration
+10-n8n-webhook-ai
+11-agent-in-production
+04-sistema-rag/*.py
+04-sistema-rag/README.md
+12-observability-and-security/tests

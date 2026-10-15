@@ -1,0 +1,129 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource-variable/jetbrains-mono';
+
+/*
+ * Aurora Shop Ops: an observability console.
+ *
+ * Dark control-room theme: near-black background, panels slightly lighter and a
+ * single "live" signal (blue). Green, amber and red are reserved for status (ok,
+ * waiting, error). Numbers use a monospace font because in a timing waterfall
+ * the columns have to line up on their own.
+ */
+@theme {
+  --color-ink: #e6edf3;
+  --color-paper: #0b0f14;
+  --color-panel: #121923;
+  --color-raised: #182231;
+  --color-line: #243040;
+  --color-slate: #8b9bab;
+  --color-signal: #3aa0ff;
+  --color-alert: #f2635a;
+  --color-ok: #3fb68b;
+  --color-waiting: #e3b341;
+
+  --font-sans: 'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    color-scheme: dark;
+  }
+
+  body {
+    background:
+      radial-gradient(60rem 30rem at 85% -10%, rgb(58 160 255 / 0.08), transparent 60%),
+      var(--color-paper);
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    background: rgb(58 160 255 / 0.35);
+  }
+
+  input,
+  textarea {
+    color: var(--color-ink);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-slate);
+  }
+
+  /* Focus must be visible: the keyboard is used to approve refunds. */
+  :focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .card {
+    border: 1px solid var(--color-line);
+    background: var(--color-panel);
+    border-radius: 0.75rem;
+  }
+
+  .field {
+    width: 100%;
+    border: 1px solid var(--color-line);
+    background: var(--color-paper);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    transition: border-color 120ms;
+  }
+
+  .field:focus {
+    border-color: var(--color-signal);
+  }
+
+  .button {
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition:
+      background-color 120ms,
+      opacity 120ms;
+  }
+
+  .button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .button-primary {
+    background: var(--color-signal);
+    color: #04121f;
+  }
+
+  .button-primary:not(:disabled):hover {
+    background: #6ab8ff;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-line);
+    padding: 0.125rem 0.625rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+}

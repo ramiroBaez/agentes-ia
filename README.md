@@ -30,7 +30,7 @@ Cada proyecto se apoya en el anterior y suma una capa nueva de complejidad. Cada
 | 9 | Orquestación multi-agente | Supervisor + workers especializados, límites de iteraciones | ✅ Hecho |
 | 10 | Automatización low-code (n8n) | Flujos visuales, nodos LLM, caso de uso real | ✅ Hecho |
 | 11 | Agente en producción | API HTTP con FastAPI, empaquetado con Docker, deploy en la nube | ✅ Hecho |
-| 12 | Observabilidad y seguridad | Trazabilidad (LangSmith/Langfuse), rate limiting, human-in-the-loop | Planeado |
+| 12 | Observabilidad y seguridad | Trazas por SSE, métricas Prometheus, cuotas por plan, API keys con scopes, guardrails y PII, human-in-the-loop, consola React | ✅ Hecho |
 
 ### Roadmap
 
@@ -67,8 +67,9 @@ Después entrá a la carpeta de cualquier proyecto y seguí su README.
 - **Validación de datos:** Pydantic
 - **Base vectorial:** ChromaDB
 - **API HTTP:** FastAPI + Uvicorn
-- **Contenedores:** Docker (imagen + docker-compose)
-- **Próximamente:** Langfuse
+- **Contenedores:** Docker (imagen + docker-compose), nginx como único origen
+- **Observabilidad y seguridad:** trazas propias (SSE), Prometheus, SQLite, JWT en cookies `httpOnly` + CSRF
+- **Consola web:** React + Vite + Tailwind
 
 ### Estructura del repositorio
 
@@ -87,7 +88,7 @@ agentes-ia/
 ├── 09-multi-agent-orchestration/
 ├── 10-n8n-webhook-ai/
 ├── 11-agent-in-production/
-├── ...
+├── 12-observability-and-security/
 └── README.md             # Este archivo
 ```
 
@@ -119,7 +120,7 @@ Each project builds on the previous one and adds a new layer of complexity. Ever
 | 9 | Multi-agent orchestration | Supervisor + specialized workers, iteration limits | ✅ Done |
 | 10 | Low-code automation (n8n) | Visual workflows, LLM nodes, real-world use case | ✅ Done |
 | 11 | Agent in production | HTTP API with FastAPI, Docker packaging, cloud deploy | ✅ Done |
-| 12 | Observability & security | Tracing (LangSmith/Langfuse), rate limiting, human-in-the-loop | Planned |
+| 12 | Observability & security | Live traces over SSE, Prometheus metrics, per-plan quotas, scoped API keys, guardrails and PII masking, human-in-the-loop, React console | ✅ Done |
 
 ### Roadmap
 
@@ -156,8 +157,9 @@ The repo targets Spanish-speaking audiences: **all visible demo surface** (conso
 - **Data validation:** Pydantic
 - **Vector database:** ChromaDB
 - **HTTP API:** FastAPI + Uvicorn
-- **Containers:** Docker (image + docker-compose)
-- **Coming up:** Langfuse
+- **Containers:** Docker (image + docker-compose), nginx as the single origin
+- **Observability & security:** own tracing (SSE), Prometheus, SQLite, JWT in `httpOnly` cookies + CSRF
+- **Web console:** React + Vite + Tailwind
 
 ### Repository layout
 
@@ -176,7 +178,7 @@ agentes-ia/
 ├── 09-multi-agent-orchestration/
 ├── 10-n8n-webhook-ai/
 ├── 11-agent-in-production/
-├── ...
+├── 12-observability-and-security/
 └── README.md             # This file
 ```
 

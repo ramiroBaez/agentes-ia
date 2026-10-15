@@ -1,0 +1,24 @@
+# Local data and secrets: never committed
+.env
+.env.local
+*.db
+*.db-wal
+*.db-shm
+# The example is versioned; the .env with the real values is not.
+!.env.example
+
+# RAG index (regenerated at runtime)
+chroma_db/
+
+# Frontend
+web/node_modules/
+web/dist/
+web/.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
