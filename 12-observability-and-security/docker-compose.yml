@@ -40,7 +40,7 @@ services:
       CORS_ORIGINS: '["http://localhost:8080"]'
     volumes:
       - data:/data
-    restart: unless-stopped
+    restart: "no"
     # The API is not published by itself: only nginx sees it. A `ports` here
     # would give the container a second entrance that skips the header policy.
     expose:
@@ -56,7 +56,7 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    restart: unless-stopped
+    restart: "no"
 
 volumes:
   data:
